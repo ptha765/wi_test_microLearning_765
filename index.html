@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>WI MicroLearn AI — Microlearning & Assessment Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -409,6 +410,28 @@
     border-radius: 10px; color: #991B1B; font-size: 13px; line-height: 1.6;
   }
 
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 600;
+    font-family: var(--font); color: white; opacity: 0;
+    transform: translateY(10px); transition: all 0.3s;
+    pointer-events: none; max-width: 320px; line-height: 1.5;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { background: var(--accent-green); }
+  .toast.error { background: var(--accent-red); }
+  .toast.info { background: var(--navy); }
+  .toast.warn { background: var(--accent); color: var(--navy); }
+
+  /* ── PRINT STYLES ── */
+  @media print {
+    .header, .sidebar, .action-bar, .tab-header, .result-meta { display: none !important; }
+    .app-shell { grid-template-columns: 1fr; }
+    .poster-preview { border-radius: 0; }
+    body { background: white; }
+  }
+
   /* ── SCROLLBAR ── */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -607,8 +630,8 @@
       <div id="posterContainer"></div>
 
       <div class="action-bar">
-        <button class="btn-action" onclick="window.print()">🖨️ พิมพ์โปสเตอร์</button>
-        <button class="btn-action" onclick="alert('Export PNG/PDF: ฟีเจอร์นี้พร้อมใน Production Build ที่ใช้ html2canvas + jsPDF')">📥 Download PNG</button>
+        <button class="btn-action" onclick="printPoster()">🖨️ พิมพ์โปสเตอร์</button>
+        <button class="btn-action" id="btnPNG" onclick="downloadPosterPNG()">📥 Download PNG</button>
         <button class="btn-action" onclick="setPage('review')">← กลับ Review</button>
         <button class="btn-action primary" onclick="goToExport()">📥 Export Excel →</button>
       </div>
@@ -681,15 +704,15 @@ function setPage(page) {
 }
 
 function goToReview() {
-  if (!generatedData) { alert('กรุณา Generate เนื้อหาก่อนครับ — กลับไปที่ Step 1'); setPage('upload'); return; }
+  if (!generatedData) { showToast('กรุณา Generate เนื้อหาก่อนครับ ↑ กดปุ่ม Generate ด้านบน', 'warn'); setPage('upload'); return; }
   setPage('review');
 }
 function goToPoster() {
-  if (!generatedData) { alert('กรุณา Generate เนื้อหาก่อนครับ'); setPage('upload'); return; }
+  if (!generatedData) { showToast('กรุณา Generate เนื้อหาก่อนครับ', 'warn'); setPage('upload'); return; }
   setPage('poster');
 }
 function goToExport() {
-  if (!generatedData) { alert('กรุณา Generate เนื้อหาก่อนครับ'); setPage('upload'); return; }
+  if (!generatedData) { showToast('กรุณา Generate เนื้อหาก่อนครับ', 'warn'); setPage('upload'); return; }
   setPage('export');
 }
 
@@ -744,7 +767,9 @@ async function startGenerate() {
   const textArea = document.getElementById('wiTextarea').value.trim();
   const fileInput = document.getElementById('fileInput');
   if (!textArea && fileInput.files.length === 0) {
-    alert('กรุณาอัพโหลดไฟล์ WI หรือวาง text ก่อนครับ');
+    showToast('⚠️ กรุณาอัพโหลดไฟล์ WI หรือวาง text ก่อนครับ', 'warn');
+    document.getElementById('uploadZone').style.borderColor = 'var(--accent-red)';
+    setTimeout(() => { document.getElementById('uploadZone').style.borderColor = ''; }, 2000);
     return;
   }
   const wiContent = textArea || getSampleWI();
@@ -990,12 +1015,50 @@ function revealAnswer(el, chosen, correct) {
 }
 
 async function regenQuestion(btn, id, type) {
+  if (!generatedData) return;
   btn.disabled = true;
   btn.textContent = '⏳';
-  await sleep(1200);
-  btn.textContent = '🔄 Regen';
-  btn.disabled = false;
-  alert(`Regen Q${id} (${type}) — ใน Production Build จะเรียก AI API สร้างข้อใหม่แทนที่ข้อเดิม`);
+  const card = btn.closest('.quiz-card');
+  card.style.opacity = '0.5';
+  card.style.pointerEvents = 'none';
+
+  const bloomLevel = type === 'pre' ? 'Remember หรือ Understand' : 'Apply หรือ Analyze (เชิงสถานการณ์)';
+  const existing = (type === 'pre' ? generatedData.pre_test : generatedData.post_test)
+    .map(q => q.question).join(' || ');
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: 'คุณคือ HRD Expert สร้างข้อสอบ Bloom Taxonomy สำหรับ WI โรงงาน ตอบเป็น JSON เท่านั้น ห้ามมี preamble หรือ markdown',
+        messages: [{ role: 'user', content: `สร้างข้อสอบใหม่ 1 ข้อ ระดับ ${bloomLevel} สำหรับ WI: "${generatedData.wi_title}"
+ห้ามซ้ำกับโจทย์เหล่านี้: ${existing}
+ตอบ JSON format: {"id":${id},"bloom_level":"${type==='pre'?'Remember':'Apply'}","question":"คำถาม","options":{"A":"ตัวเลือก A","B":"ตัวเลือก B","C":"ตัวเลือก C","D":"ตัวเลือก D"},"answer":"A","explanation":"อธิบายเฉลย"}` }]
+      })
+    });
+    if (!resp.ok) throw new Error('API ' + resp.status);
+    const data = await resp.json();
+    const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const newQ = JSON.parse(clean);
+
+    const arr = type === 'pre' ? generatedData.pre_test : generatedData.post_test;
+    const idx = arr.findIndex(q => q.id === id);
+    if (idx !== -1) arr[idx] = { ...newQ, id };
+
+    if (type === 'pre') document.getElementById('tabPretest').innerHTML = renderQuizList(generatedData.pre_test, 'pre');
+    else document.getElementById('tabPosttest').innerHTML = renderQuizList(generatedData.post_test, 'post');
+    showToast('✅ สร้างข้อสอบใหม่สำเร็จ!', 'success');
+  } catch (err) {
+    card.style.opacity = '1';
+    card.style.pointerEvents = '';
+    btn.disabled = false;
+    btn.textContent = '🔄 Regen';
+    showToast('❌ Regen ล้มเหลว — ตรวจสอบ Internet แล้วลองใหม่', 'error');
+  }
 }
 
 // ═══════════════════════════════════════
@@ -1194,6 +1257,90 @@ function getDemoData() {
       { step:6, task:"ตรวจสอบ Lock Ring Screw Mark หลัง Unload Roll", critical_point:"พบการขยับ → ถอดตรวจเกลียว → ใช้ Loctite → ขันแน่น → Mark ใหม่ → บันทึก Form", is_safety_critical:true }
     ]
   };
+}
+
+// ═══════════════════════════════════════
+// TOAST NOTIFICATION
+// ═══════════════════════════════════════
+function showToast(msg, type = 'info') {
+  let t = document.getElementById('appToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'appToast';
+    t.className = 'toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.className = `toast ${type}`;
+  requestAnimationFrame(() => {
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.classList.remove('show'); }, 3200);
+  });
+}
+
+// ═══════════════════════════════════════
+// PRINT POSTER
+// ═══════════════════════════════════════
+function printPoster() {
+  const el = document.getElementById('posterContainer');
+  if (!el || !el.innerHTML.trim()) { showToast('ยังไม่มี Poster — กรุณา Generate ก่อน', 'warn'); return; }
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap');
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: #0F1F3D; font-family: 'IBM Plex Sans Thai', sans-serif; padding: 20px; }
+      ${[...document.styleSheets].flatMap(s => { try { return [...s.cssRules].map(r => r.cssText); } catch(e){ return []; } }).filter(r => r.includes('poster')).join('\n')}
+    </style>
+    </head><body>${el.innerHTML}<script>window.onload=()=>{window.print();window.close();}<\/script></body></html>`);
+  win.document.close();
+}
+
+// ═══════════════════════════════════════
+// DOWNLOAD POSTER AS PNG (html2canvas)
+// ═══════════════════════════════════════
+async function downloadPosterPNG() {
+  const el = document.getElementById('posterContainer');
+  if (!el || !el.innerHTML.trim()) { showToast('ยังไม่มี Poster — กรุณา Generate ก่อน', 'warn'); return; }
+  if (typeof html2canvas === 'undefined') { showToast('กำลังโหลด Library... กรุณารอสักครู่แล้วลองใหม่', 'info'); return; }
+
+  const btn = document.getElementById('btnPNG');
+  const origText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '⏳ กำลัง Render...';
+
+  try {
+    const posterEl = el.querySelector('.poster-preview');
+    if (!posterEl) throw new Error('No poster element');
+
+    const canvas = await html2canvas(posterEl, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#0F1F3D',
+      logging: false,
+      onclone: (doc) => {
+        const cloned = doc.querySelector('.poster-preview');
+        if (cloned) {
+          cloned.style.borderRadius = '0';
+          cloned.style.width = '800px';
+        }
+      }
+    });
+
+    const link = document.createElement('a');
+    const wiName = (generatedData?.wi_title || 'WI_Poster').substring(0, 40).replace(/[^a-zA-Z0-9ก-๙]/g, '_');
+    link.download = `WI_Poster_${wiName}_${new Date().toISOString().split('T')[0]}.png`;
+    link.href = canvas.toDataURL('image/png', 1.0);
+    link.click();
+    showToast('✅ Download PNG สำเร็จ! พิมพ์ขนาด A2/A3 ได้เลย', 'success');
+  } catch (err) {
+    console.error('PNG export error:', err);
+    showToast('❌ Export PNG ล้มเหลว — ลองกด "พิมพ์โปสเตอร์" แทน', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origText;
+  }
 }
 
 // INIT
