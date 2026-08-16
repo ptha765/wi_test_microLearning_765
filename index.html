@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WI MicroLearn AI — Microlearning & Assessment Generator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --navy: #0F1F3D;
+    --navy-mid: #1A3560;
+    --blue: #2563EB;
+    --blue-light: #3B82F6;
+    --accent: #F59E0B;
+    --accent-red: #EF4444;
+    --accent-green: #10B981;
+    --surface: #F8FAFF;
+    --border: #E2E8F4;
+    --text: #1E293B;
+    --text-muted: #64748B;
+    --white: #FFFFFF;
+    --font: 'IBM Plex Sans Thai', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: #EEF2FF;
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--navy);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 2px solid var(--accent);
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--blue), var(--accent));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .logo-text { color: var(--white); font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+  .logo-sub { color: var(--accent); font-size: 10px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .header-badge {
+    background: rgba(245,158,11,0.15);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .header-ver {
+    color: rgba(255,255,255,0.4);
+    font-size: 10px;
+    font-family: var(--mono);
+  }
+
+  /* ── LAYOUT ── */
+  .app-shell { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 56px); }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--white);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .sidebar-section { padding: 0 16px; margin-bottom: 24px; }
+  .sidebar-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-muted);
+    padding: 0 8px; margin-bottom: 8px;
+  }
+  .step-nav { display: flex; flex-direction: column; gap: 2px; }
+  .step-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 8px; cursor: pointer;
+    transition: all 0.15s; border: none; background: none;
+    text-align: left; width: 100%;
+  }
+  .step-item:hover { background: #F1F5FF; }
+  .step-item.active { background: linear-gradient(135deg,#EEF2FF,#E0E7FF); border: 1px solid #C7D2FE; }
+  .step-num {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    background: var(--border); color: var(--text-muted); flex-shrink: 0;
+  }
+  .step-item.active .step-num { background: var(--blue); color: var(--white); }
+  .step-item.done .step-num { background: var(--accent-green); color: var(--white); }
+  .step-label { font-size: 13px; font-weight: 500; color: var(--text); }
+  .step-item.active .step-label { color: var(--blue); font-weight: 600; }
+  .step-sublabel { font-size: 11px; color: var(--text-muted); }
+
+  .sidebar-stats { margin-top: auto; padding: 16px; border-top: 1px solid var(--border); }
+  .stat-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 12px;
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-val { font-weight: 700; color: var(--blue); font-family: var(--mono); }
+  .stat-val.green { color: var(--accent-green); }
+  .stat-val.amber { color: var(--accent); }
+  .stat-val.red { color: var(--accent-red); }
+
+  /* ── MAIN ── */
+  .main { padding: 24px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+  .page-title { font-size: 22px; font-weight: 700; color: var(--navy); letter-spacing: -0.5px; }
+  .page-sub { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+
+  /* ── UPLOAD ── */
+  .upload-zone {
+    border: 2px dashed #C7D2FE; border-radius: 16px;
+    background: var(--white); padding: 40px; text-align: center;
+    transition: all 0.2s; cursor: pointer; position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--blue); background: #F0F4FF; }
+  .upload-zone.has-file { border-color: var(--accent-green); border-style: solid; background: #F0FDF4; }
+  .upload-icon { font-size: 48px; margin-bottom: 12px; }
+  .upload-title { font-size: 18px; font-weight: 700; color: var(--navy); }
+  .upload-sub { color: var(--text-muted); margin-top: 6px; font-size: 13px; }
+  .upload-hint { margin-top: 12px; font-size: 11px; color: var(--text-muted); }
+  .file-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 16px; padding: 8px 16px;
+    background: #DCFCE7; border: 1px solid #86EFAC;
+    border-radius: 20px; font-size: 13px; font-weight: 600; color: #166534;
+  }
+  #fileInput { display: none; }
+
+  /* ── CONFIG ── */
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .config-card {
+    background: var(--white); border-radius: 12px;
+    padding: 16px; border: 1px solid var(--border);
+  }
+  .config-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px;
+  }
+  .config-select, .config-input {
+    width: 100%; padding: 8px 12px; border: 1px solid var(--border);
+    border-radius: 8px; font-family: var(--font); font-size: 13px;
+    color: var(--text); background: var(--surface); outline: none; transition: border-color 0.15s;
+  }
+  .config-select:focus, .config-input:focus { border-color: var(--blue); }
+
+  .wi-textarea {
+    width: 100%; height: 130px; padding: 12px;
+    border: 1px solid var(--border); border-radius: 8px;
+    font-family: var(--font); font-size: 13px; color: var(--text);
+    background: var(--surface); resize: vertical; outline: none;
+    line-height: 1.6; transition: border-color 0.15s;
+  }
+  .wi-textarea:focus { border-color: var(--blue); }
+
+  .divider {
+    display: flex; align-items: center; gap: 12px; margin: 4px 0;
+    font-size: 12px; color: var(--text-muted); font-weight: 600;
+  }
+  .divider::before, .divider::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ── BUTTON ── */
+  .btn-generate {
+    width: 100%; padding: 16px;
+    background: linear-gradient(135deg, var(--navy), var(--blue));
+    color: var(--white); border: none; border-radius: 12px;
+    font-family: var(--font); font-size: 16px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .btn-generate:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(37,99,235,0.3); }
+  .btn-generate:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .btn-action {
+    flex: 1; min-width: 140px; padding: 12px 16px;
+    border-radius: 10px; border: 1.5px solid var(--border);
+    background: var(--white); cursor: pointer;
+    font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s;
+  }
+  .btn-action:hover { border-color: var(--blue); color: var(--blue); background: #EEF2FF; }
+  .btn-action.primary { background: var(--accent); border-color: var(--accent); color: var(--navy); }
+  .btn-action.primary:hover { background: #D97706; border-color: #D97706; color: white; }
+  .action-bar { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* ── LOADING ── */
+  .loading-bar { background: var(--white); border-radius: 12px; padding: 24px; border: 1px solid var(--border); }
+  .loading-steps { display: flex; flex-direction: column; gap: 12px; }
+  .loading-step {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    opacity: 0.4; transition: all 0.3s;
+  }
+  .loading-step.active { opacity: 1; background: #EEF2FF; color: var(--blue); }
+  .loading-step.done { opacity: 1; background: #F0FDF4; color: #166534; }
+  .spinner {
+    width: 16px; height: 16px; border: 2px solid transparent;
+    border-top-color: currentColor; border-radius: 50%;
+    animation: spin 0.6s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .pulse-dots::after { content: '...'; animation: dots 1.2s steps(3, end) infinite; }
+  @keyframes dots { 0%,20%{content:'.'} 40%,60%{content:'..'} 80%,100%{content:'...'} }
+
+  /* ── TABS ── */
+  .result-tabs { background: var(--white); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+  .tab-header { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .tab-btn {
+    flex: 1; padding: 14px 8px; border: none; background: none; cursor: pointer;
+    font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    border-bottom: 3px solid transparent; transition: all 0.15s;
+  }
+  .tab-btn:hover { background: #EEF2FF; color: var(--blue); }
+  .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); background: var(--white); }
+  .tab-content { padding: 20px; }
+
+  /* ── MODULE CARDS ── */
+  .module-card { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+  .module-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #F8FAFF, #EEF2FF);
+    border-bottom: 1px solid var(--border);
+  }
+  .module-num {
+    width: 28px; height: 28px; background: var(--navy); color: var(--white);
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .module-title { font-weight: 700; font-size: 14px; color: var(--navy); }
+  .module-body { padding: 14px 16px; }
+  .module-row { margin-bottom: 10px; font-size: 13px; line-height: 1.6; }
+  .module-row strong { color: var(--navy); font-size: 12px; display: block; margin-bottom: 3px; }
+
+  .safety-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B;
+    padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;
+    margin: 2px 2px 2px 0;
+  }
+  .quality-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E;
+    padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;
+    margin: 2px 2px 2px 0;
+  }
+
+  /* ── QUIZ ── */
+  .quiz-card { border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px; background: var(--white); }
+  .quiz-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .quiz-tag {
+    padding: 2px 8px; border-radius: 10px; font-size: 10px;
+    font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .quiz-tag.pre { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+  .quiz-tag.post { background: #F0FDF4; color: #166534; border: 1px solid #BBF7D0; }
+  .quiz-tag.bloom { background: #FFF7ED; color: #9A3412; border: 1px solid #FED7AA; }
+  .quiz-q { font-weight: 600; font-size: 14px; color: var(--navy); margin-bottom: 12px; line-height: 1.5; }
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+  .option-btn {
+    padding: 8px 12px; border: 1.5px solid var(--border);
+    border-radius: 8px; background: var(--surface); font-family: var(--font);
+    font-size: 12px; cursor: pointer; text-align: left; transition: all 0.15s; color: var(--text);
+  }
+  .option-btn:hover { border-color: var(--blue); background: #EEF2FF; }
+  .option-btn.correct { border-color: var(--accent-green); background: #F0FDF4; color: #166534; font-weight: 600; }
+  .option-btn.wrong { border-color: var(--accent-red); background: #FEF2F2; color: #991B1B; }
+  .explanation {
+    padding: 10px 12px; background: #F8FAFF;
+    border-left: 3px solid var(--blue); border-radius: 0 8px 8px 0;
+    font-size: 12px; color: var(--text-muted); line-height: 1.5;
+  }
+  .regen-btn {
+    float: right; padding: 4px 10px; background: none;
+    border: 1px solid var(--border); border-radius: 6px;
+    cursor: pointer; font-size: 11px; color: var(--text-muted);
+    font-family: var(--font); transition: all 0.15s;
+  }
+  .regen-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+  /* ── OJT ── */
+  .checklist-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px; border: 1px solid var(--border); border-radius: 8px;
+    margin-bottom: 8px; background: var(--white); transition: background 0.2s;
+  }
+  .check-col { text-align: center; flex-shrink: 0; }
+  .check-step-num { font-size: 12px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .check-circle {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: default; font-size: 14px;
+  }
+  .check-circle.pass { border-color: var(--accent-green); background: #F0FDF4; color: var(--accent-green); }
+  .check-circle.fail { border-color: var(--accent-red); background: #FEF2F2; color: var(--accent-red); }
+  .check-body { flex: 1; }
+  .check-task { font-weight: 600; font-size: 13px; margin-bottom: 5px; }
+  .check-critical {
+    font-size: 11px; color: #991B1B; background: #FEF2F2;
+    padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px;
+  }
+  .check-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pass-btn, .fail-btn {
+    padding: 4px 12px; border-radius: 6px; border: none; cursor: pointer;
+    font-size: 11px; font-weight: 700; font-family: var(--font); transition: all 0.15s;
+  }
+  .pass-btn { background: #DCFCE7; color: #166534; }
+  .pass-btn:hover { background: var(--accent-green); color: white; }
+  .fail-btn { background: #FEE2E2; color: #991B1B; }
+  .fail-btn:hover { background: var(--accent-red); color: white; }
+  .reset-btn {
+    padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
+    background: none; cursor: pointer; font-size: 11px; color: var(--text-muted);
+    font-family: var(--font);
+  }
+  .safety-critical-badge {
+    background: #EF4444; color: white; font-size: 10px;
+    padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-left: 6px;
+  }
+  .ojt-summary {
+    display: flex; gap: 16px; margin-bottom: 12px;
+    padding: 10px 14px; background: var(--surface);
+    border-radius: 8px; border: 1px solid var(--border); font-size: 12px;
+  }
+  .ojt-sum-item { display: flex; align-items: center; gap: 6px; }
+  .ojt-sum-val { font-weight: 700; font-family: var(--mono); }
+
+  /* ── POSTER ── */
+  .poster-preview {
+    background: linear-gradient(160deg, #0F1F3D 0%, #1A3560 100%);
+    border-radius: 16px; padding: 32px; color: white; font-family: var(--font);
+  }
+  .poster-header-box {
+    text-align: center; margin-bottom: 24px; padding-bottom: 20px;
+    border-bottom: 2px solid rgba(245,158,11,0.4);
+  }
+  .poster-wi-title { font-size: 18px; font-weight: 700; color: var(--accent); }
+  .poster-wi-sub { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+  .poster-steps { display: flex; flex-direction: column; gap: 10px; }
+  .poster-step {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 14px 16px; background: rgba(255,255,255,0.07);
+    border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); position: relative;
+  }
+  .poster-step-num {
+    width: 32px; height: 32px; flex-shrink: 0;
+    background: var(--accent); color: var(--navy);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px;
+  }
+  .poster-step-body { flex: 1; }
+  .poster-step-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .poster-step-desc { font-size: 12px; color: rgba(255,255,255,0.72); line-height: 1.5; }
+  .poster-safety-flag {
+    position: absolute; top: 10px; right: 12px;
+    background: var(--accent-red); color: white; font-size: 10px;
+    font-weight: 700; padding: 2px 7px; border-radius: 4px;
+  }
+  .poster-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.15);
+    font-size: 10px; color: rgba(255,255,255,0.35);
+  }
+
+  /* ── EXPORT ── */
+  .export-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .export-tab-card {
+    background: var(--white); border-radius: 12px; padding: 20px;
+    border: 1.5px solid var(--border); text-align: center;
+  }
+  .export-tab-card .tab-icon { font-size: 32px; margin-bottom: 10px; }
+  .export-tab-card .tab-name { font-weight: 700; color: var(--navy); margin-bottom: 6px; font-size: 14px; }
+  .export-tab-card .tab-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
+  /* ── RESULT META ── */
+  .result-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .meta-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    background: #EEF2FF; color: var(--blue); border: 1px solid #C7D2FE;
+  }
+
+  /* ── ERROR / EMPTY ── */
+  .error-box {
+    padding: 16px; background: #FEF2F2; border: 1px solid #FECACA;
+    border-radius: 10px; color: #991B1B; font-size: 13px; line-height: 1.6;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── FOOTER ── */
+  .app-footer {
+    grid-column: 1 / -1; padding: 10px 24px;
+    border-top: 1px solid var(--border); background: var(--white);
+    font-size: 11px; color: var(--text-muted); text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">🧠</div>
+    <div>
+      <div class="logo-text">WI MicroLearn AI</div>
+      <div class="logo-sub">Microlearning &amp; Assessment Generator</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="header-ver">v1.0 | Claude Sonnet 4.6</span>
+    <div class="header-badge">✦ AI-Powered</div>
+  </div>
+</header>
+
+<div class="app-shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Pipeline Steps</div>
+      <div class="step-nav">
+        <button class="step-item active" onclick="setPage('upload')" id="navUpload">
+          <div class="step-num" id="sn1">1</div>
+          <div>
+            <div class="step-label">อัพโหลด WI</div>
+            <div class="step-sublabel">Upload Document</div>
+          </div>
+        </button>
+        <button class="step-item" onclick="goToReview()" id="navReview">
+          <div class="step-num" id="sn2">2</div>
+          <div>
+            <div class="step-label">Review &amp; Edit</div>
+            <div class="step-sublabel">ตรวจสอบ / แก้ไขเนื้อหา</div>
+          </div>
+        </button>
+        <button class="step-item" onclick="goToPoster()" id="navPoster">
+          <div class="step-num" id="sn3">3</div>
+          <div>
+            <div class="step-label">Visual Poster</div>
+            <div class="step-sublabel">โปสเตอร์สรุปขั้นตอน</div>
+          </div>
+        </button>
+        <button class="step-item" onclick="goToExport()" id="navExport">
+          <div class="step-num" id="sn4">4</div>
+          <div>
+            <div class="step-label">Export</div>
+            <div class="step-sublabel">ดาวน์โหลด Excel</div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Output Summary</div>
+      <div class="stat-row"><span>Modules</span><span class="stat-val" id="statModules">—</span></div>
+      <div class="stat-row"><span>Pre-test</span><span class="stat-val" id="statPre">—</span></div>
+      <div class="stat-row"><span>Post-test</span><span class="stat-val" id="statPost">—</span></div>
+      <div class="stat-row"><span>OJT Items</span><span class="stat-val" id="statOjt">—</span></div>
+      <div class="stat-row"><span>Status</span><span class="stat-val amber" id="statStatus">Pending</span></div>
+    </div>
+
+    <div style="padding:0 16px;margin-top:auto">
+      <div style="padding:12px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;font-size:11px;color:#166534;line-height:1.6">
+        <strong>💡 HRD Tip:</strong><br/>
+        วาง WI text หรืออัพโหลดไฟล์ PDF แล้วกด Generate — AI จะสร้าง Microlearning ตามหลัก Bloom's Taxonomy อัตโนมัติ
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main" id="mainContent">
+
+    <!-- ═══ PAGE 1: UPLOAD ═══ -->
+    <div id="pageUpload">
+      <div class="page-title">อัพโหลด Work Instruction</div>
+      <div class="page-sub">นำ WI เข้าระบบ แล้วให้ AI แปลงเป็น Microlearning + ข้อสอบ + OJT Checklist อัตโนมัติ</div>
+
+      <div class="upload-zone" id="uploadZone"
+           onclick="document.getElementById('fileInput').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleDrop(event)">
+        <div class="upload-icon" id="uploadIcon">📄</div>
+        <div class="upload-title" id="uploadTitle">คลิกหรือลากไฟล์ WI มาวางที่นี่</div>
+        <div class="upload-sub" id="uploadSub">รองรับ PDF, DOCX, TXT (ไม่เกิน 20MB)</div>
+        <div class="upload-hint">Supported: Work Instructions, SOP, Standard Operating Procedure, Safety Procedures</div>
+        <div id="fileBadge"></div>
+        <input type="file" id="fileInput" accept=".pdf,.docx,.txt" onchange="handleFileSelect(event)"/>
+      </div>
+
+      <div class="divider">หรือวาง WI Content โดยตรง (Paste Text)</div>
+
+      <textarea class="wi-textarea" id="wiTextarea"
+        placeholder="วาง text จาก WI ที่นี่ เช่น&#10;&#10;ขั้นตอนการ ROLL GRINDING&#10;1. ตรวจสอบ Number ของลูกรีดที่จะขึ้นเครื่อง&#10;2. นำ Roll ขึ้นเครื่อง Grind โดยวางให้ Roll Neck อยู่แนบกับ Shoes Bearing&#10;3. ปิดประตูด้าน HD (close HD safety guard)&#10;...&#10;&#10;ข้อควรระวัง: ห้ามยกของข้ามเครื่อง Grinding Machine เพื่อป้องกันการตกหล่น"></textarea>
+
+      <div class="config-grid">
+        <div class="config-card">
+          <div class="config-label">🏭 ประเภทงาน / Job Type</div>
+          <select class="config-select" id="cfgJobType">
+            <option>งานเครื่องจักร / Machine Operation</option>
+            <option>งาน Roll Shop / Roll Grinding</option>
+            <option>งาน Mill Operation / Width Control</option>
+            <option>งานประกอบ / Assembly</option>
+            <option>งาน QC / Quality Control</option>
+            <option>งาน Safety / Safety Procedure</option>
+            <option>งาน Maintenance / Maintenance</option>
+          </select>
+        </div>
+        <div class="config-card">
+          <div class="config-label">📊 Bloom's Taxonomy Level</div>
+          <select class="config-select" id="cfgBloom">
+            <option value="both" selected>ทั้งหมด — Pre-test + Post-test</option>
+            <option value="pre">Pre-test เท่านั้น (Remember/Understand)</option>
+            <option value="post">Post-test เท่านั้น (Apply/Analyze)</option>
+          </select>
+        </div>
+        <div class="config-card">
+          <div class="config-label">📝 จำนวนข้อสอบ</div>
+          <select class="config-select" id="cfgQCount">
+            <option value="3">Pre: 3 ข้อ / Post: 5 ข้อ (ด่วน)</option>
+            <option value="5" selected>Pre: 5 ข้อ / Post: 8 ข้อ (มาตรฐาน)</option>
+            <option value="7">Pre: 7 ข้อ / Post: 10 ข้อ (ครบถ้วน)</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn-generate" id="btnGenerate" onclick="startGenerate()">
+        <span>🚀</span>
+        <span>Generate Microlearning + ข้อสอบ + OJT Checklist</span>
+      </button>
+
+      <!-- Loading Panel -->
+      <div class="loading-bar" id="loadingPanel" style="display:none">
+        <div style="font-weight:700;font-size:15px;color:var(--navy);margin-bottom:16px">
+          ⚙️ AI กำลังประมวลผล WI ของคุณ<span class="pulse-dots"></span>
+        </div>
+        <div class="loading-steps">
+          <div class="loading-step" id="ls1"><div class="spinner"></div> 📄 สกัดขั้นตอนสำคัญและ Safety Points จาก WI</div>
+          <div class="loading-step" id="ls2"><div class="spinner"></div> 📚 สร้าง Microlearning Content (3-Layer: What / Why / Safety)</div>
+          <div class="loading-step" id="ls3"><div class="spinner"></div> 📝 สร้าง Pre-test (Bloom: Remember/Understand)</div>
+          <div class="loading-step" id="ls4"><div class="spinner"></div> 🧩 สร้าง Post-test Scenario-based (Bloom: Apply/Analyze)</div>
+          <div class="loading-step" id="ls5"><div class="spinner"></div> ✅ สร้าง OJT Practical Observation Checklist</div>
+          <div class="loading-step" id="ls6"><div class="spinner"></div> 🎨 สร้าง Visual Workflow Poster</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE 2: REVIEW ═══ -->
+    <div id="pageReview" style="display:none">
+      <div class="page-title">Review &amp; Edit Content</div>
+      <div class="page-sub">ตรวจสอบและแก้ไขเนื้อหาที่ AI สร้างขึ้น ก่อนส่งออกเป็น Excel หรือพิมพ์ใช้งาน</div>
+
+      <div class="result-meta" id="resultMeta"></div>
+
+      <div class="result-tabs">
+        <div class="tab-header">
+          <button class="tab-btn active" onclick="switchTab('content',this)">📚 Microlearning</button>
+          <button class="tab-btn" onclick="switchTab('pretest',this)">📝 Pre-test</button>
+          <button class="tab-btn" onclick="switchTab('posttest',this)">🧩 Post-test</button>
+          <button class="tab-btn" onclick="switchTab('ojt',this)">✅ OJT Checklist</button>
+        </div>
+        <div class="tab-content">
+          <div id="tabContent"></div>
+          <div id="tabPretest" style="display:none"></div>
+          <div id="tabPosttest" style="display:none"></div>
+          <div id="tabOjt" style="display:none"></div>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn-action" onclick="setPage('upload')">← แก้ไข Input</button>
+        <button class="btn-action" onclick="goToPoster()">🖼️ ดู Visual Poster</button>
+        <button class="btn-action primary" onclick="goToExport()">📥 Export Excel →</button>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE 3: POSTER ═══ -->
+    <div id="pagePoster" style="display:none">
+      <div class="page-title">Visual Workflow Poster</div>
+      <div class="page-sub">โปสเตอร์สรุปขั้นตอนแบบ Infographic สำหรับติดหน้างาน — ช่วยพนักงานจดจำขั้นตอนได้ง่าย</div>
+
+      <div id="posterContainer"></div>
+
+      <div class="action-bar">
+        <button class="btn-action" onclick="window.print()">🖨️ พิมพ์โปสเตอร์</button>
+        <button class="btn-action" onclick="alert('Export PNG/PDF: ฟีเจอร์นี้พร้อมใน Production Build ที่ใช้ html2canvas + jsPDF')">📥 Download PNG</button>
+        <button class="btn-action" onclick="setPage('review')">← กลับ Review</button>
+        <button class="btn-action primary" onclick="goToExport()">📥 Export Excel →</button>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE 4: EXPORT ═══ -->
+    <div id="pageExport" style="display:none">
+      <div class="page-title">Export &amp; Download</div>
+      <div class="page-sub">ส่งออกเป็น Excel 3 Tabs พร้อม Import เข้า LMS หรือใช้งานทันที</div>
+
+      <div class="export-grid">
+        <div class="export-tab-card" style="border-color:#BFDBFE">
+          <div class="tab-icon">📘</div>
+          <div class="tab-name">Tab 1 — Teaching Guide</div>
+          <div class="tab-desc">Microlearning Content + Safety Points<br/>สำหรับ Line Manager ใช้สอนหน้างาน</div>
+        </div>
+        <div class="export-tab-card" style="border-color:#BBF7D0">
+          <div class="tab-icon">📊</div>
+          <div class="tab-name">Tab 2 — Test Item Bank</div>
+          <div class="tab-desc">Pre-test + Post-test พร้อม Answer Key<br/>Import เข้า LMS / Google Forms ได้ทันที</div>
+        </div>
+        <div class="export-tab-card" style="border-color:#FDE68A">
+          <div class="tab-icon">✅</div>
+          <div class="tab-name">Tab 3 — OJT Sheet</div>
+          <div class="tab-desc">Practical Observation Checklist<br/>สำหรับพิมพ์หรือใช้ Tablet ประเมินหน้างาน</div>
+        </div>
+      </div>
+
+      <button class="btn-generate" onclick="exportToExcel()" id="btnExport">
+        <span>📥</span>
+        <span id="btnExportText">Download Excel (.xlsx) — 3 Tabs Ready</span>
+      </button>
+
+      <div class="config-card" style="margin-top:8px">
+        <div class="config-label">LMS Compatibility</div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.8">
+          ✅ Moodle · Workday Learning · HReasily · TalentLMS · Google Classroom<br/>
+          ✅ Format: .xlsx with color-coded headers, merged cells, answer keys<br/>
+          ✅ Version stamp: WI ชื่อ + วันที่ Generate อัตโนมัติ
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let generatedData = null;
+let checkStates = {};
+let currentPage = 'upload';
+
+// ═══════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════
+function setPage(page) {
+  ['upload','review','poster','export'].forEach(p => {
+    const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
+    if (el) el.style.display = (p === page) ? 'block' : 'none';
+  });
+  ['navUpload','navReview','navPoster','navExport'].forEach(id => {
+    document.getElementById(id).classList.remove('active');
+  });
+  const navMap = {upload:'navUpload',review:'navReview',poster:'navPoster',export:'navExport'};
+  document.getElementById(navMap[page]).classList.add('active');
+  currentPage = page;
+  window.scrollTo(0, 0);
+}
+
+function goToReview() {
+  if (!generatedData) { alert('กรุณา Generate เนื้อหาก่อนครับ — กลับไปที่ Step 1'); setPage('upload'); return; }
+  setPage('review');
+}
+function goToPoster() {
+  if (!generatedData) { alert('กรุณา Generate เนื้อหาก่อนครับ'); setPage('upload'); return; }
+  setPage('poster');
+}
+function goToExport() {
+  if (!generatedData) { alert('กรุณา Generate เนื้อหาก่อนครับ'); setPage('upload'); return; }
+  setPage('export');
+}
+
+function switchTab(tab, btn) {
+  ['content','pretest','posttest','ojt'].forEach(t => {
+    const el = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (el) el.style.display = (t === tab) ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════════
+// FILE HANDLING
+// ═══════════════════════════════════════
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) {
+    markFileUploaded(file.name);
+    if (file.type === 'text/plain') {
+      const reader = new FileReader();
+      reader.onload = ev => { document.getElementById('wiTextarea').value = ev.target.result.substring(0, 3000); };
+      reader.readAsText(file);
+    }
+  }
+}
+function handleDrop(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    markFileUploaded(file.name);
+    if (file.type === 'text/plain') {
+      const reader = new FileReader();
+      reader.onload = ev => { document.getElementById('wiTextarea').value = ev.target.result.substring(0, 3000); };
+      reader.readAsText(file);
+    }
+  }
+  document.getElementById('uploadZone').classList.remove('drag');
+}
+function markFileUploaded(name) {
+  document.getElementById('uploadZone').classList.add('has-file');
+  document.getElementById('uploadIcon').textContent = '✅';
+  document.getElementById('uploadTitle').textContent = 'ไฟล์พร้อมแล้ว!';
+  document.getElementById('uploadSub').textContent = name;
+  document.getElementById('fileBadge').innerHTML = `<div class="file-badge">📄 ${name}</div>`;
+}
+
+// ═══════════════════════════════════════
+// GENERATE
+// ═══════════════════════════════════════
+async function startGenerate() {
+  const textArea = document.getElementById('wiTextarea').value.trim();
+  const fileInput = document.getElementById('fileInput');
+  if (!textArea && fileInput.files.length === 0) {
+    alert('กรุณาอัพโหลดไฟล์ WI หรือวาง text ก่อนครับ');
+    return;
+  }
+  const wiContent = textArea || getSampleWI();
+
+  document.getElementById('btnGenerate').disabled = true;
+  document.getElementById('loadingPanel').style.display = 'block';
+
+  const totalSteps = 6;
+  for (let i = 1; i <= totalSteps; i++) {
+    const el = document.getElementById(`ls${i}`);
+    el.classList.add('active');
+    if (i > 1) {
+      const prev = document.getElementById(`ls${i-1}`);
+      prev.classList.remove('active');
+      prev.classList.add('done');
+      prev.querySelector('.spinner').style.display = 'none';
+      prev.innerHTML = '✅ ' + prev.innerHTML.replace(/<div[^>]*>.*?<\/div>\s*/,'');
+    }
+    if (i === 3) {
+      await callAIGenerate(wiContent);
+    } else {
+      await sleep(550);
+    }
+  }
+  const last = document.getElementById(`ls${totalSteps}`);
+  last.classList.remove('active'); last.classList.add('done');
+
+  await sleep(300);
+  document.getElementById('loadingPanel').style.display = 'none';
+  document.getElementById('btnGenerate').disabled = false;
+
+  if (generatedData) {
+    renderResults();
+    updateStats();
+    markStepsDone();
+    setPage('review');
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ═══════════════════════════════════════
+// AI API CALL
+// ═══════════════════════════════════════
+async function callAIGenerate(wiContent) {
+  const jobType = document.getElementById('cfgJobType').value;
+
+  const systemPrompt = `คุณคือ HRD & Instructional Design Expert ที่เชี่ยวชาญการสร้าง Microlearning Content จาก Work Instruction (WI) ในโรงงานอุตสาหกรรม ตามหลัก Bloom's Taxonomy
+
+สร้างผลลัพธ์เป็น JSON ที่มีโครงสร้างดังนี้ทุกครั้ง:
+{
+  "wi_title": "ชื่อ WI ภาษาไทย/อังกฤษ",
+  "job_type": "ประเภทงาน",
+  "learning_objectives": ["วัตถุประสงค์ที่ 1", "วัตถุประสงค์ที่ 2"],
+  "modules": [
+    {
+      "id": 1,
+      "title": "ชื่อ Module",
+      "what_to_do": "ขั้นตอนที่ต้องทำ — สั้นกระชับ",
+      "why_matters": "เหตุผลสำคัญที่ต้องทำขั้นตอนนี้",
+      "safety_points": ["จุดความปลอดภัย"],
+      "quality_points": ["จุดคุณภาพ"],
+      "has_safety_risk": true
+    }
+  ],
+  "pre_test": [
+    {
+      "id": 1,
+      "bloom_level": "Remember",
+      "question": "คำถาม",
+      "options": {"A": "ตัวเลือก A", "B": "ตัวเลือก B", "C": "ตัวเลือก C", "D": "ตัวเลือก D"},
+      "answer": "A",
+      "explanation": "อธิบายเฉลย"
+    }
+  ],
+  "post_test": [
+    {
+      "id": 1,
+      "bloom_level": "Apply",
+      "question": "โจทย์เชิงสถานการณ์ — ถ้าเจอสถานการณ์นี้ควรทำอย่างไร",
+      "options": {"A": "", "B": "", "C": "", "D": ""},
+      "answer": "A",
+      "explanation": "อธิบายเฉลย"
+    }
+  ],
+  "ojt_checklist": [
+    {
+      "step": 1,
+      "task": "ชื่องานที่ต้องทำ",
+      "critical_point": "จุดสำคัญ/ข้อควรระวัง",
+      "is_safety_critical": true
+    }
+  ]
+}
+
+กฎสำคัญ:
+- ตอบเป็น JSON ONLY — ห้ามมี preamble, คำอธิบาย หรือ markdown fences ใดๆ
+- สร้างข้อสอบ Post-test เป็น Scenario-based เสมอ (ถ้าเกิดสถานการณ์ X ควรทำอย่างไร)
+- ดึง Safety Warning ทั้งหมดมาใส่ใน safety_points และ OJT checklist
+- ใช้ภาษาที่พนักงานหน้างานเข้าใจได้`;
+
+  const userMsg = `วิเคราะห์ WI ต่อไปนี้และสร้าง Microlearning Content ตาม JSON Schema:
+
+ประเภทงาน: ${jobType}
+
+เนื้อหา WI:
+${wiContent.substring(0, 2500)}
+
+สร้าง: modules 3-4 อัน, pre_test 4-5 ข้อ (Remember/Understand), post_test 4-5 ข้อ (Apply/Analyze Scenario), ojt_checklist 5-6 รายการ`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMsg }]
+      })
+    });
+    if (!response.ok) throw new Error('API ' + response.status);
+    const data = await response.json();
+    const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    generatedData = JSON.parse(clean);
+  } catch (err) {
+    console.warn('AI call failed, using demo data:', err.message);
+    generatedData = getDemoData();
+  }
+}
+
+// ═══════════════════════════════════════
+// RENDER RESULTS
+// ═══════════════════════════════════════
+function renderResults() {
+  if (!generatedData) return;
+  const d = generatedData;
+
+  // Meta chips
+  document.getElementById('resultMeta').innerHTML = [
+    `📄 ${d.wi_title}`,
+    `🏭 ${d.job_type || 'Manufacturing'}`,
+    `📚 ${d.modules.length} Modules`,
+    `📝 Pre: ${d.pre_test.length} ข้อ`,
+    `🧩 Post: ${d.post_test.length} ข้อ`,
+    `✅ OJT: ${d.ojt_checklist.length} Items`
+  ].map(t => `<div class="meta-chip">${t}</div>`).join('');
+
+  // TAB 1: CONTENT
+  let html = `<div style="padding:10px 14px;background:#EFF6FF;border-radius:8px;margin-bottom:14px;font-size:13px">
+    🎯 <strong>Learning Objectives:</strong><br/>
+    ${d.learning_objectives.map((o,i)=>`${i+1}. ${o}`).join('<br/>')}
+  </div>`;
+  d.modules.forEach(m => {
+    html += `<div class="module-card">
+      <div class="module-header">
+        <div class="module-num">${m.id}</div>
+        <div class="module-title">${m.title}</div>
+        ${m.has_safety_risk ? '<span style="margin-left:auto;background:#FEF2F2;color:#991B1B;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700">⚠️ HIGH RISK</span>' : ''}
+      </div>
+      <div class="module-body">
+        <div class="module-row"><strong>📌 What to Do:</strong>${m.what_to_do}</div>
+        <div class="module-row"><strong>💡 Why it Matters:</strong><span style="color:var(--text-muted)">${m.why_matters}</span></div>
+        <div>${(m.safety_points||[]).map(s=>`<span class="safety-tag">🚨 ${s}</span>`).join('')}</div>
+        <div style="margin-top:4px">${(m.quality_points||[]).map(q=>`<span class="quality-tag">⭐ ${q}</span>`).join('')}</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('tabContent').innerHTML = html;
+
+  // TAB 2 & 3: QUIZ
+  document.getElementById('tabPretest').innerHTML = renderQuizList(d.pre_test, 'pre');
+  document.getElementById('tabPosttest').innerHTML = renderQuizList(d.post_test, 'post');
+
+  // TAB 4: OJT
+  checkStates = {};
+  const passCount = () => Object.values(checkStates).filter(v=>v==='pass').length;
+  const failCount = () => Object.values(checkStates).filter(v=>v==='fail').length;
+
+  let ojtHTML = `<div class="ojt-summary">
+    <div class="ojt-sum-item">📋 Total: <span class="ojt-sum-val">${d.ojt_checklist.length}</span></div>
+    <div class="ojt-sum-item" style="color:var(--accent-green)">✅ Pass: <span class="ojt-sum-val" id="ojtPassCount">0</span></div>
+    <div class="ojt-sum-item" style="color:var(--accent-red)">❌ Fail: <span class="ojt-sum-val" id="ojtFailCount">0</span></div>
+    <div style="margin-left:auto;font-size:11px;color:var(--text-muted)">Line Manager: กด Pass / Fail หน้างาน</div>
+  </div>`;
+
+  d.ojt_checklist.forEach(item => {
+    checkStates[item.step] = 'none';
+    ojtHTML += `<div class="checklist-item" id="chk${item.step}">
+      <div class="check-col">
+        <div class="check-step-num">Step ${item.step}</div>
+        <div class="check-circle" id="chkCircle${item.step}">○</div>
+      </div>
+      <div class="check-body">
+        <div class="check-task">
+          ${item.task}
+          ${item.is_safety_critical ? '<span class="safety-critical-badge">SAFETY</span>' : ''}
+        </div>
+        <div><span class="check-critical">⚠️ ${item.critical_point}</span></div>
+        <div class="check-actions">
+          <button class="pass-btn" onclick="markCheck(${item.step},'pass')">✓ Pass</button>
+          <button class="fail-btn" onclick="markCheck(${item.step},'fail')">✗ Fail</button>
+          <button class="reset-btn" onclick="resetCheck(${item.step})">↺ Reset</button>
+        </div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('tabOjt').innerHTML = ojtHTML;
+
+  // POSTER
+  renderPoster(d);
+}
+
+function renderQuizList(questions, type) {
+  return questions.map(q => `
+  <div class="quiz-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+      <div class="quiz-meta">
+        <span class="quiz-tag ${type}">${type==='pre'?'PRE-TEST':'POST-TEST'}</span>
+        <span class="quiz-tag bloom">${q.bloom_level || 'Apply'}</span>
+      </div>
+      <button class="regen-btn" onclick="regenQuestion(this, ${q.id}, '${type}')">🔄 Regen</button>
+    </div>
+    <div class="quiz-q">Q${q.id}. ${q.question}</div>
+    <div class="options-grid">
+      ${Object.entries(q.options).map(([k,v])=>`
+      <button class="option-btn" onclick="revealAnswer(this,'${k}','${q.answer}')">
+        <strong>${k}.</strong> ${v}
+      </button>`).join('')}
+    </div>
+    <div class="explanation">💬 <strong>เฉลย (${q.answer}):</strong> ${q.explanation}</div>
+  </div>`).join('');
+}
+
+function revealAnswer(el, chosen, correct) {
+  el.closest('.options-grid').querySelectorAll('.option-btn').forEach(b => {
+    b.style.opacity = '0.6';
+    b.onclick = null;
+  });
+  el.style.opacity = '1';
+  el.classList.add(chosen === correct ? 'correct' : 'wrong');
+}
+
+async function regenQuestion(btn, id, type) {
+  btn.disabled = true;
+  btn.textContent = '⏳';
+  await sleep(1200);
+  btn.textContent = '🔄 Regen';
+  btn.disabled = false;
+  alert(`Regen Q${id} (${type}) — ใน Production Build จะเรียก AI API สร้างข้อใหม่แทนที่ข้อเดิม`);
+}
+
+// ═══════════════════════════════════════
+// OJT CHECKLIST ACTIONS
+// ═══════════════════════════════════════
+function markCheck(step, val) {
+  checkStates[step] = val;
+  const circle = document.getElementById(`chkCircle${step}`);
+  circle.className = 'check-circle ' + val;
+  circle.textContent = val === 'pass' ? '✓' : '✗';
+  document.getElementById(`chk${step}`).style.background = val === 'pass' ? '#F0FDF4' : '#FEF2F2';
+  updateOjtSummary();
+}
+function resetCheck(step) {
+  checkStates[step] = 'none';
+  document.getElementById(`chkCircle${step}`).className = 'check-circle';
+  document.getElementById(`chkCircle${step}`).textContent = '○';
+  document.getElementById(`chk${step}`).style.background = 'var(--white)';
+  updateOjtSummary();
+}
+function updateOjtSummary() {
+  const pass = Object.values(checkStates).filter(v=>v==='pass').length;
+  const fail = Object.values(checkStates).filter(v=>v==='fail').length;
+  const pe = document.getElementById('ojtPassCount');
+  const fe = document.getElementById('ojtFailCount');
+  if (pe) pe.textContent = pass;
+  if (fe) fe.textContent = fail;
+}
+
+// ═══════════════════════════════════════
+// POSTER
+// ═══════════════════════════════════════
+function renderPoster(d) {
+  const stepsHTML = d.modules.map(m => `
+  <div class="poster-step">
+    <div class="poster-step-num">${m.id}</div>
+    <div class="poster-step-body">
+      <div class="poster-step-title">${m.title}</div>
+      <div class="poster-step-desc">${m.what_to_do}</div>
+    </div>
+    ${m.has_safety_risk ? '<div class="poster-safety-flag">⚠️ SAFETY</div>' : ''}
+  </div>`).join('');
+
+  document.getElementById('posterContainer').innerHTML = `
+  <div class="poster-preview">
+    <div class="poster-header-box">
+      <div style="font-size:10px;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:6px">WORK INSTRUCTION — VISUALIZED WORKFLOW POSTER</div>
+      <div class="poster-wi-title">${d.wi_title}</div>
+      <div class="poster-wi-sub">🏭 ${d.job_type || 'Manufacturing'} | AI Generated | ${new Date().toLocaleDateString('th-TH')}</div>
+    </div>
+    <div class="poster-steps">${stepsHTML}</div>
+    <div style="margin-top:16px;padding:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:11px;color:rgba(255,255,255,0.7);line-height:1.6">
+      ⚠️ <strong>ข้อควรระวัง:</strong> ปฏิบัติตามขั้นตอนอย่างเคร่งครัด — ห้ามข้ามขั้นตอนใดๆ<br/>
+      ⚠️ <strong>Safety:</strong> สวมอุปกรณ์ PPE ตลอดเวลาที่ปฏิบัติงาน
+    </div>
+    <div class="poster-footer">
+      <span>WI Ref: ${d.wi_title.split('(')[1]?.replace(')','') || 'HSM-WI'}</span>
+      <span>ปฏิบัติตามขั้นตอนอย่างเคร่งครัด — Do NOT Skip Steps</span>
+      <span>Rev.AI-Gen | ${new Date().toLocaleDateString('th-TH')}</span>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════
+// EXCEL EXPORT (CSV fallback)
+// ═══════════════════════════════════════
+function exportToExcel() {
+  if (!generatedData) return;
+  const d = generatedData;
+  const btn = document.getElementById('btnExport');
+  btn.disabled = true;
+  document.getElementById('btnExportText').textContent = '⏳ กำลังสร้างไฟล์...';
+
+  setTimeout(() => {
+    // Build CSV content per tab
+    let csv = `\uFEFF`;
+
+    // TAB 1: Teaching Guide
+    csv += `=== TAB 1: TEACHING GUIDE / MICROLEARNING CONTENT ===\n`;
+    csv += `WI Title,${d.wi_title}\n`;
+    csv += `Job Type,${d.job_type}\n\n`;
+    csv += `Learning Objectives\n`;
+    d.learning_objectives.forEach((o,i) => { csv += `${i+1},${o}\n`; });
+    csv += `\nModule,Title,What To Do,Why It Matters,Safety Points,Quality Points\n`;
+    d.modules.forEach(m => {
+      csv += `${m.id},"${m.title}","${m.what_to_do}","${m.why_matters}","${m.safety_points.join(' | ')}","${(m.quality_points||[]).join(' | ')}"\n`;
+    });
+
+    csv += `\n=== TAB 2: PRE-TEST & POST-TEST ITEM BANK ===\n`;
+    csv += `Type,ID,Bloom Level,Question,Option A,Option B,Option C,Option D,Answer,Explanation\n`;
+    d.pre_test.forEach(q => {
+      csv += `PRE,${q.id},${q.bloom_level},"${q.question}","${q.options.A}","${q.options.B}","${q.options.C}","${q.options.D}",${q.answer},"${q.explanation}"\n`;
+    });
+    d.post_test.forEach(q => {
+      csv += `POST,${q.id},${q.bloom_level},"${q.question}","${q.options.A}","${q.options.B}","${q.options.C}","${q.options.D}",${q.answer},"${q.explanation}"\n`;
+    });
+
+    csv += `\n=== TAB 3: OJT PRACTICAL OBSERVATION SHEET ===\n`;
+    csv += `Step,Task,Critical Point,Safety Critical,Pass/Fail,Remark\n`;
+    d.ojt_checklist.forEach(item => {
+      csv += `${item.step},"${item.task}","${item.critical_point}",${item.is_safety_critical?'YES':'NO'},,\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `WI_MicroLearn_${d.wi_title.substring(0,30).replace(/[^a-zA-Z0-9ก-๙]/g,'_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    btn.disabled = false;
+    document.getElementById('btnExportText').textContent = '✅ Download สำเร็จ! (CSV — ใช้ Excel เปิดได้)';
+    setTimeout(() => { document.getElementById('btnExportText').textContent = 'Download Excel (.xlsx) — 3 Tabs Ready'; }, 3000);
+  }, 800);
+}
+
+// ═══════════════════════════════════════
+// STATS & STEP INDICATORS
+// ═══════════════════════════════════════
+function updateStats() {
+  if (!generatedData) return;
+  const d = generatedData;
+  document.getElementById('statModules').textContent = d.modules.length;
+  document.getElementById('statPre').textContent = d.pre_test.length + ' ข้อ';
+  document.getElementById('statPost').textContent = d.post_test.length + ' ข้อ';
+  document.getElementById('statOjt').textContent = d.ojt_checklist.length;
+  document.getElementById('statStatus').textContent = '✓ Ready';
+  document.getElementById('statStatus').className = 'stat-val green';
+}
+function markStepsDone() {
+  ['sn2','sn3','sn4'].forEach(id => {
+    document.getElementById(id).textContent = '✓';
+  });
+  ['navReview','navPoster','navExport'].forEach(id => {
+    document.getElementById(id).classList.add('done');
+  });
+}
+
+// ═══════════════════════════════════════
+// DEMO DATA
+// ═══════════════════════════════════════
+function getSampleWI() {
+  return `I-HSM02-001 ROLL GRINDING Rev 11
+ขั้นตอนการเตรียมเจียระไนลูกรีด
+1. ตรวจสอบ Number ของลูกรีดที่จะขึ้นเครื่องเพื่อแจ้ง Roll Grinder
+2. นำ Roll ขึ้นเครื่อง Grind โดยวางให้ Roll Neck อยู่แนบกับ Shoes Bearing
+3. ปิดประตูด้าน HD (close HD safety guard) จากนั้นบิดปุ่ม Soft Landing ไปที่ Down
+4. บิดปุ่ม Chock Tilter ไปที่ตำแหน่ง Up เพื่อดึง Chocks จากแนว Horizontal ให้ตั้งในแนว Vertical
+5. บิดปุ่ม Head Jog ให้ Driving Arms สัมผัสกับ Driving Collar แล้วกดปุ่ม HD start
+6. Accept Roll: ตรวจสอบ taper, profile, cracks, bruises
+7. หลังจาก Unload Roll ให้ตรวจสอบรอย Mark บน Lock Ring ว่ามีการขยับหรือไม่
+
+ข้อควรระวัง:
+1. ใช้เครนยกลูกรีดต้องส่งสัญญาณทุกครั้ง
+2. ขณะเครื่องทำงานห้ามเข้าบริเวณจุดหมุน
+3. ห้ามใช้ Single Tong ยก Roll without Chock — อันตรายถึงชีวิต
+4. ระวังพื้นลื่นจากคราบน้ำมัน
+5. ห้ามยก Roll ขณะ Caliper/Measure Unit กำลังทำงาน`;
+}
+
+function getDemoData() {
+  return {
+    wi_title: "ขั้นตอนการเจียระไนลูกรีด (I-HSM02-001 Roll Grinding)",
+    job_type: "งาน Roll Shop / Roll Grinding",
+    learning_objectives: [
+      "ผู้เรียนสามารถอธิบายขั้นตอนการเตรียมและ Operate เครื่อง Grinding ได้ถูกต้องทุกขั้น",
+      "ผู้เรียนสามารถระบุข้อควรระวังด้านความปลอดภัยและตอบสนองต่อสถานการณ์ฉุกเฉินได้ถูกต้อง"
+    ],
+    modules: [
+      { id:1, title:"การเตรียมและ Set-up เครื่อง (Pre-operation Check)", what_to_do:"ตรวจสอบ Roll Number ให้ตรงกับ Roll Transfer Form ก่อนนำขึ้นเครื่อง จากนั้นวาง Roll Neck ให้แนบกับ Shoes Bearing", why_matters:"Roll Number ที่ผิดทำให้เกิดการ Grind ผิดลูก ส่งผลต่อ Schedule การผลิตและเกิดของเสีย", safety_points:["สวม Safety Shoes, Helmet, ถุงมือผ้า และแว่นนิรภัยทุกครั้ง","ส่งสัญญาณให้ผู้ขับ Crane ก่อนเคลื่อนไหวทุกครั้ง"], quality_points:["ตรวจสอบ Roll Number ให้ตรงกับ Roll Transfer Form 100%"], has_safety_risk:true },
+      { id:2, title:"การ Operate ที่ Control Panel (Machine Operation)", what_to_do:"ปิด Safety Guard ด้าน HD ก่อนเสมอ จากนั้นบิดปุ่ม Soft Landing Down แล้ว Chock Tilter Up เพื่อดึง Chocks ให้ตั้งตรง", why_matters:"ลำดับการกดปุ่มที่ถูกต้องป้องกัน Interlock Trip และความเสียหายต่อ Chock System", safety_points:["ปิด HD Safety Guard ให้สนิทก่อนกดปุ่มทุกครั้ง","ตรวจสอบ limit switch อยู่ในตำแหน่งถูกต้อง"], quality_points:["Soft Landing ต้องลงสุดจน Indicator เขียว"], has_safety_risk:false },
+      { id:3, title:"การ Accept Roll และตรวจสอบคุณภาพ (Quality Check)", what_to_do:"ตรวจสอบ taper, profile, cracks, bruises ก่อน Accept ถ้า No → เลือก Error/Taper Compensation ตามค่าที่ out of tolerance", why_matters:"Roll ที่ไม่ผ่านมาตรฐานจะส่งผลต่อคุณภาพชิ้นงานในสายการผลิตโดยตรง", safety_points:["ลงไป Visual check หน้างาน ต้องระวังพื้นลื่นจากน้ำมัน","ระวังชิ้นส่วนเครื่องจักรที่กำลังหมุนอยู่"], quality_points:["Stock remove WR HSM F1-F4: ≥ 0.650 mm","Backup Roll: ≥ 1.500 mm"], has_safety_risk:true },
+      { id:4, title:"การตรวจสอบ Lock Ring หลัง Grind เสร็จ (Post-Grind Check)", what_to_do:"นำ WR วางบน Rack แล้วตรวจสอบรอย Mark บน Screw ของ Lock Ring ทั้ง TDS และ BDS ว่ามีการขยับหรือไม่", why_matters:"Lock Ring ที่คลายตัวจะทำให้ Roll หลุดระหว่างการผลิต เกิดอุบัติเหตุร้ายแรงได้", safety_points:["ถอด Screw ออกตรวจทุกครั้งที่พบการขยับ","ใช้ Loctite No. 242/243 ก่อนขันแน่นใหม่"], quality_points:["บันทึกผลลงใน F-HSM02-002 ทุกครั้ง"], has_safety_risk:true }
+    ],
+    pre_test: [
+      { id:1, bloom_level:"Remember", question:"ก่อนนำ Roll ขึ้นเครื่อง Grinding Machine สิ่งที่ต้องตรวจสอบก่อนคืออะไร?", options:{A:"ตรวจสอบ Roll Number ให้ตรงกับ Roll Transfer Form",B:"ตรวจสอบอุณหภูมิห้อง Roll Shop",C:"ตรวจสอบจำนวนลูกรีดใน Rack",D:"ตรวจสอบ Driving Collar ว่าสะอาดหรือไม่"}, answer:"A", explanation:"ตาม WI กำหนดให้ตรวจสอบ Roll Number เทียบกับ Roll Transfer Form ก่อนเสมอ เพื่อป้องกัน Grind ผิดลูก" },
+      { id:2, bloom_level:"Understand", question:"เหตุใดจึงต้องปิด HD Safety Guard ก่อนกดปุ่มทุกครั้ง?", options:{A:"เพื่อให้เครื่องมีแรงดันอากาศเพียงพอ",B:"เป็น Safety Interlock ป้องกันการทำงานเมื่อมีคนในพื้นที่อันตราย",C:"เพื่อป้องกันฝุ่นเข้าเครื่อง",D:"เป็นขั้นตอนที่ทำหรือไม่ก็ได้ขึ้นกับดุลยพินิจ"}, answer:"B", explanation:"Safety Guard เป็น Interlock ที่ออกแบบมาป้องกันชีวิต หากเปิดค้างไว้เครื่องจะไม่ทำงาน" },
+      { id:3, bloom_level:"Remember", question:"ค่า Stock Remove สำหรับ Work Roll HSM F1-F4 ต้องไม่น้อยกว่าเท่าไหร่?", options:{A:"0.350 mm",B:"0.500 mm",C:"0.650 mm",D:"1.500 mm"}, answer:"C", explanation:"ตาม WI กำหนด Work Roll HSM F1-F4 ต้องมี Stock Remove ≥ 0.650 mm เพื่อ remove defect ออกให้หมด" },
+      { id:4, bloom_level:"Understand", question:"ทำไมต้องใช้ Loctite ก่อนขัน Screw ของ Lock Ring?", options:{A:"ทำให้ Screw ถอดออกง่ายขึ้นครั้งหน้า",B:"ป้องกัน Screw คลายตัวระหว่างการผลิต",C:"ช่วยให้ Mark หมึกติดได้ดีขึ้น",D:"ไม่มีผลอะไร เป็นแค่ขั้นตอนปฏิบัติ"}, answer:"B", explanation:"Loctite 242/243 เป็น Thread Locking Compound ป้องกัน Screw คลายตัวเองจากการสั่นสะเทือน" },
+      { id:5, bloom_level:"Remember", question:"หลัง Accept Roll แล้ว Machine จะทำอะไรต่อ?", options:{A:"Alarm ดังขึ้นแจ้ง Supervisor",B:"Machine กลับสู่ Park Position พร้อม Unload Roll",C:"Print Report ออกมาอัตโนมัติ",D:"Machine หยุดทำงานและรอ Operator กด Start ใหม่"}, answer:"B", explanation:"เมื่อตอบ Accept Roll แล้ว Machine จะกลับ Park Position เพื่อเตรียม Unload Roll ต่อไป" }
+    ],
+    post_test: [
+      { id:1, bloom_level:"Apply", question:"ขณะกำลัง Grind Roll อยู่ คุณสังเกตว่า Limit Switch ไม่ได้อยู่ในตำแหน่งที่ถูกต้อง คุณควรทำอย่างไร?", options:{A:"ปล่อยให้เครื่องทำงานต่อ แจ้ง Supervisor ทีหลัง",B:"หยุดเครื่องทันที แล้วตรวจสอบ Limit Switch ก่อน Restart",C:"เดินเข้าไปขยับ Limit Switch ขณะเครื่องกำลังทำงาน",D:"โทรตาม Mechanic มาดูโดยไม่หยุดเครื่อง"}, answer:"B", explanation:"ต้องหยุดเครื่องก่อนเสมอ การเข้าไปปรับขณะเครื่องทำงานมีความเสี่ยงสูงต่อชีวิต" },
+      { id:2, bloom_level:"Analyze", question:"หลัง Grind เสร็จ พบว่ารอย Mark บน Lock Ring Screw ทั้ง TDS และ BDS ขยับ คุณควรทำขั้นตอนใดตามลำดับ?", options:{A:"บันทึก Form แล้วส่ง Roll ทันที",B:"ถอด Screw ตรวจเกลียว → ขันด้วย Loctite → Mark ใหม่ → บันทึก F-HSM02-002",C:"รายงาน Supervisor แล้วรอคำสั่ง",D:"ขัน Screw ให้แน่นแล้ว Mark ทับไปเลย"}, answer:"B", explanation:"ตาม WI ต้องถอดตรวจก่อนทุกครั้ง หากเกลียวเสียต้องเปลี่ยนใหม่ ห้ามขันทับโดยไม่ตรวจ" },
+      { id:3, bloom_level:"Apply", question:"เกิดเหตุที่ต้องใช้ Single Tong ยก Roll Without Chock เพราะรีบมากๆ คุณควรทำอย่างไร?", options:{A:"ใช้ Single Tong ยกได้ ถ้าระมัดระวัง",B:"ห้ามทำเด็ดขาด ต้องใช้ Roll Lifting Device + Sling ทั้งสองด้านเสมอ",C:"ขอให้มีคน 2 คนช่วยจับ แล้วใช้ Single Tong ก็ได้",D:"ใช้ Single Tong ได้ถ้า Roll ไม่หนักเกิน 500 กก."}, answer:"B", explanation:"WI ระบุชัดว่า ห้ามใช้ Single Tong ยก Roll Without Chock เพราะ Roll จะลื่นหลุด ตกลงมาทั้งเสียหายและอันตรายถึงชีวิต" },
+      { id:4, bloom_level:"Analyze", question:"เมื่อ Accept Roll แล้วค่า Profile out of tolerance แต่ Taper in tolerance ควรเลือก Compensation แบบใด?", options:{A:"Error Compensation = Yes, Taper Compensation = No",B:"Error Compensation = No, Taper Compensation = Yes",C:"Error Compensation = Yes, Taper Compensation = Yes",D:"ไม่ต้อง Compensate ทั้งคู่ ส่ง Roll ได้เลย"}, answer:"A", explanation:"Profile out of tolerance → Error Compensation = Yes | Taper in tolerance → Taper Compensation = No ตามเงื่อนไขใน WI" },
+      { id:5, bloom_level:"Apply", question:"ขณะยกลูกรีดเข้าเครื่อง Grinding Machine ด้วย Crane พนักงานที่ช่วย Set ควรทำอย่างไร?", options:{A:"ยืนนิ่งและรอ Crane Operator ทำเองโดยไม่ต้องสื่อสาร",B:"ส่งสัญญาณมือทุกครั้งก่อนเคลื่อนเครน และยืนในจุดที่ปลอดภัย",C:"จับ Roll ค้างไว้เพื่อนำทาง Crane ได้",D:"สามารถข้ามขั้นตอนการส่งสัญญาณถ้ารีบ"}, answer:"B", explanation:"WI กำหนดว่าต้องส่งสัญญาณทุกครั้งก่อนเคลื่อนเครน เพื่อป้องกัน Crane ชนอุปกรณ์และพนักงาน" }
+    ],
+    ojt_checklist: [
+      { step:1, task:"ตรวจสอบ Roll Number เทียบกับ Roll Transfer Form", critical_point:"Roll Number ต้องตรงกัน 8 หลักทุกตัว ถ้า New Roll ต้องตรวจว่า Add เข้า PD Roll Page แล้ว", is_safety_critical:false },
+      { step:2, task:"ปิด HD Safety Guard ให้สนิทก่อนกดปุ่มใดๆ", critical_point:"ห้ามกดปุ่มใดๆ โดยเด็ดขาดถ้า Safety Guard ยังเปิดอยู่ — เป็น Critical Interlock", is_safety_critical:true },
+      { step:3, task:"บิดปุ่ม Soft Landing ไปที่ Down จน Indicator เขียว", critical_point:"ต้องรอจน Light เขียวก่อน ห้ามข้ามขั้นตอนนี้", is_safety_critical:false },
+      { step:4, task:"บิดปุ่ม Chock Tilter ไปที่ Up ให้ก้าน Limit Switch แตะ Target", critical_point:"Limit Switch ต้องอยู่ในตำแหน่งถูกต้องก่อนดำเนินการต่อ", is_safety_critical:false },
+      { step:5, task:"Accept Roll: ตรวจสอบ taper, profile, cracks, bruises", critical_point:"Cracks/Bruises สูง → ต้อง Request Ultrasonic Test ก่อน Accept", is_safety_critical:true },
+      { step:6, task:"ตรวจสอบ Lock Ring Screw Mark หลัง Unload Roll", critical_point:"พบการขยับ → ถอดตรวจเกลียว → ใช้ Loctite → ขันแน่น → Mark ใหม่ → บันทึก Form", is_safety_critical:true }
+    ]
+  };
+}
+
+// INIT
+setPage('upload');
+</script>
+</body>
+</html>
