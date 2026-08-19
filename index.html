@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>WI MicroLearn AI — Microlearning & Assessment Generator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -456,8 +458,8 @@
     </div>
   </div>
   <div class="header-right">
-    <span class="header-ver">v1.0 | Claude Sonnet 4.6</span>
-    <div class="header-badge">✦ AI-Powered</div>
+    <span class="header-ver">v2.0 | Standalone</span>
+    <div class="header-badge">✦ Offline Engine</div>
   </div>
 </header>
 
@@ -510,7 +512,10 @@
     <div style="padding:0 16px;margin-top:auto">
       <div style="padding:12px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;font-size:11px;color:#166534;line-height:1.6">
         <strong>💡 HRD Tip:</strong><br/>
-        วาง WI text หรืออัพโหลดไฟล์ PDF แล้วกด Generate — AI จะสร้าง Microlearning ตามหลัก Bloom's Taxonomy อัตโนมัติ
+        วาง WI text หรืออัพโหลดไฟล์ PDF แล้วกด Generate — ระบบจะสร้าง Microlearning ตามหลัก Bloom's Taxonomy อัตโนมัติ (ไม่ต้องใช้ Internet)
+      </div>
+      <div style="margin-top:8px;padding:8px 12px;background:#EEF2FF;border:1px solid #C7D2FE;border-radius:8px;font-size:11px;color:var(--blue);text-align:center;font-weight:600">
+        🔒 Standalone — ไม่ต้องใช้ Internet
       </div>
     </div>
   </aside>
@@ -521,25 +526,35 @@
     <!-- ═══ PAGE 1: UPLOAD ═══ -->
     <div id="pageUpload">
       <div class="page-title">อัพโหลด Work Instruction</div>
-      <div class="page-sub">นำ WI เข้าระบบ แล้วให้ AI แปลงเป็น Microlearning + ข้อสอบ + OJT Checklist อัตโนมัติ</div>
+      <div class="page-sub">นำ WI เข้าระบบ แล้วระบบจะแปลงเป็น Microlearning + ข้อสอบ + OJT Checklist อัตโนมัติ (Offline Engine — ไม่ต้องใช้ Internet)</div>
 
+      <!-- Upload Zone: รองรับ PDF, DOCX, TXT ด้วย PDF.js + mammoth -->
       <div class="upload-zone" id="uploadZone"
-           onclick="document.getElementById('fileInput').click()"
-           ondragover="event.preventDefault();this.classList.add('drag')"
-           ondragleave="this.classList.remove('drag')"
-           ondrop="handleDrop(event)">
-        <div class="upload-icon" id="uploadIcon">📄</div>
-        <div class="upload-title" id="uploadTitle">คลิกหรือลากไฟล์ WI มาวางที่นี่</div>
-        <div class="upload-sub" id="uploadSub">รองรับ PDF, DOCX, TXT (ไม่เกิน 20MB)</div>
-        <div class="upload-hint">Supported: Work Instructions, SOP, Standard Operating Procedure, Safety Procedures</div>
-        <div id="fileBadge"></div>
-        <input type="file" id="fileInput" accept=".pdf,.docx,.txt" onchange="handleFileSelect(event)"/>
+           ondragover="event.preventDefault();event.stopPropagation();handleDragOver(event)"
+           ondragleave="handleDragLeave(event)"
+           ondrop="handleDrop(event)"
+           onclick="document.getElementById('fileInput').click()">
+        <div id="uploadIcon" style="font-size:44px;margin-bottom:10px">📂</div>
+        <div id="uploadTitle" style="font-size:16px;font-weight:700;color:var(--navy)">ลากไฟล์ WI มาวาง หรือคลิกเพื่อเลือก</div>
+        <div id="uploadSub" style="font-size:12px;color:var(--text-muted);margin-top:6px">รองรับ PDF, Word (.docx), TXT — อ่านเนื้อหาอัตโนมัติ</div>
+        <div id="uploadProgress" style="display:none;margin-top:12px;width:100%;max-width:300px;margin-left:auto;margin-right:auto">
+          <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden">
+            <div id="progressBar" style="background:var(--blue);height:100%;width:0%;transition:width 0.3s;border-radius:4px"></div>
+          </div>
+          <div id="progressText" style="font-size:11px;color:var(--text-muted);margin-top:6px;text-align:center">กำลังอ่านไฟล์...</div>
+        </div>
+        <div id="fileBadge" style="margin-top:10px"></div>
+        <input type="file" id="fileInput" accept=".pdf,.docx,.doc,.txt" onchange="handleFileSelect(event)" style="display:none"/>
       </div>
 
-      <div class="divider">หรือวาง WI Content โดยตรง (Paste Text)</div>
+      <div style="display:flex;align-items:center;gap:8px;margin:4px 0">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:12px;color:var(--blue);font-weight:700;white-space:nowrap">หรือ Paste WI Text ด้านล่างโดยตรง</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
 
-      <textarea class="wi-textarea" id="wiTextarea"
-        placeholder="วาง text จาก WI ที่นี่ เช่น&#10;&#10;ขั้นตอนการ ROLL GRINDING&#10;1. ตรวจสอบ Number ของลูกรีดที่จะขึ้นเครื่อง&#10;2. นำ Roll ขึ้นเครื่อง Grind โดยวางให้ Roll Neck อยู่แนบกับ Shoes Bearing&#10;3. ปิดประตูด้าน HD (close HD safety guard)&#10;...&#10;&#10;ข้อควรระวัง: ห้ามยกของข้ามเครื่อง Grinding Machine เพื่อป้องกันการตกหล่น"></textarea>
+      <textarea class="wi-textarea" id="wiTextarea" style="height:150px"
+        placeholder="▼ Paste หรือพิมพ์เนื้อหา WI ที่นี่&#10;&#10;ตัวอย่าง:&#10;ขั้นตอนการควบคุม Side Guide (I-HSM01-019)&#10;1. ตรวจสอบค่า Force บน HMI ให้อยู่ในช่วง 20-50 KN&#10;2. หาก Force หาย ให้ลด Offset 2mm/time&#10;3. หาก Force เกิน 50 KN ให้เพิ่ม Offset 2mm/time&#10;&#10;ข้อควรระวัง: หาก Slab Stuck เกิน 30 วินาที ให้ทำตาม Emergency Procedure"></textarea>
 
       <div class="config-grid">
         <div class="config-card">
@@ -574,13 +589,24 @@
 
       <button class="btn-generate" id="btnGenerate" onclick="startGenerate()">
         <span>🚀</span>
-        <span>Generate Microlearning + ข้อสอบ + OJT Checklist</span>
+        <span>Generate Microlearning + ข้อสอบ + OJT Checklist จาก WI ด้านบน</span>
       </button>
+
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button onclick="resetAll()" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--border);background:var(--white);cursor:pointer;font-family:var(--font);font-size:12px;font-weight:600;color:var(--text-muted);transition:all 0.15s" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+          🔄 ล้างข้อมูลทั้งหมด (เริ่ม WI ใหม่)
+        </button>
+        <button onclick="loadDemoMode()" style="flex:1;padding:10px;border-radius:8px;border:1.5px dashed var(--border);background:var(--surface);cursor:pointer;font-family:var(--font);font-size:12px;font-weight:600;color:var(--text-muted);transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+          🔧 ทดสอบด้วย Demo WI (ไม่ต้องใช้ Internet)
+        </button>
+      </div>
+
+      <!-- Standalone Mode — No API Required -->
 
       <!-- Loading Panel -->
       <div class="loading-bar" id="loadingPanel" style="display:none">
         <div style="font-weight:700;font-size:15px;color:var(--navy);margin-bottom:16px">
-          ⚙️ AI กำลังประมวลผล WI ของคุณ<span class="pulse-dots"></span>
+          ⚙️ กำลังประมวลผล WI ของคุณ<span class="pulse-dots"></span>
         </div>
         <div class="loading-steps">
           <div class="loading-step" id="ls1"><div class="spinner"></div> 📄 สกัดขั้นตอนสำคัญและ Safety Points จาก WI</div>
@@ -728,51 +754,193 @@ function switchTab(tab, btn) {
 // ═══════════════════════════════════════
 // FILE HANDLING
 // ═══════════════════════════════════════
+// ═══════════════════════════════════════
+// CONFIG — Standalone Offline Mode
+// ═══════════════════════════════════════
+// ไม่ต้อง API Key, ไม่ต้อง Internet สำหรับฟีเจอร์หลัก
+// ใช้ Rule-based Template Engine แทน AI API
+
+// ═══════════════════════════════════════
+// FILE READING — PDF / DOCX / TXT
+// ═══════════════════════════════════════
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.add('drag');
+}
+function handleDragLeave(e) {
+  if (!document.getElementById('uploadZone').contains(e.relatedTarget)) {
+    document.getElementById('uploadZone').classList.remove('drag');
+  }
+}
 function handleFileSelect(e) {
   const file = e.target.files[0];
-  if (file) {
-    markFileUploaded(file.name);
-    if (file.type === 'text/plain') {
-      const reader = new FileReader();
-      reader.onload = ev => { document.getElementById('wiTextarea').value = ev.target.result.substring(0, 3000); };
-      reader.readAsText(file);
-    }
-  }
+  if (file) processFile(file);
 }
 function handleDrop(e) {
   e.preventDefault();
-  const file = e.dataTransfer.files[0];
-  if (file) {
-    markFileUploaded(file.name);
-    if (file.type === 'text/plain') {
-      const reader = new FileReader();
-      reader.onload = ev => { document.getElementById('wiTextarea').value = ev.target.result.substring(0, 3000); };
-      reader.readAsText(file);
-    }
-  }
+  e.stopPropagation();
   document.getElementById('uploadZone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
 }
-function markFileUploaded(name) {
-  document.getElementById('uploadZone').classList.add('has-file');
-  document.getElementById('uploadIcon').textContent = '✅';
-  document.getElementById('uploadTitle').textContent = 'ไฟล์พร้อมแล้ว!';
-  document.getElementById('uploadSub').textContent = name;
-  document.getElementById('fileBadge').innerHTML = `<div class="file-badge">📄 ${name}</div>`;
+
+async function processFile(file) {
+  const name = file.name;
+  const ext = name.split('.').pop().toLowerCase();
+  const allowed = ['pdf','docx','doc','txt'];
+  if (!allowed.includes(ext)) {
+    showToast('⚠️ รองรับเฉพาะ PDF, DOCX, DOC, TXT เท่านั้น', 'warn');
+    return;
+  }
+
+  showUploadProgress(true, 'กำลังอ่านไฟล์...', 10);
+  let text = '';
+
+  try {
+    if (ext === 'txt') {
+      text = await readTxt(file);
+    } else if (ext === 'pdf') {
+      text = await readPdf(file, (pct) => showUploadProgress(true, `กำลังอ่าน PDF... ${pct}%`, pct));
+    } else if (ext === 'docx' || ext === 'doc') {
+      showUploadProgress(true, 'กำลังอ่าน Word Document...', 40);
+      text = await readDocx(file);
+    }
+
+    showUploadProgress(true, '✅ อ่านไฟล์สำเร็จ!', 100);
+    await sleep(600);
+    showUploadProgress(false);
+
+    if (!text || text.trim().length < 20) {
+      showToast('⚠️ ไม่พบข้อความใน File นี้ — ลอง Copy & Paste ลงช่องด้านล่างแทน', 'warn');
+      markFileState(name, false);
+      return;
+    }
+
+    // Auto-fill textarea + show character count
+    document.getElementById('wiTextarea').value = text.substring(0, 4000);
+    markFileState(name, true, text.length);
+    showToast(`✅ อ่าน ${name} สำเร็จ — ${text.length.toLocaleString()} ตัวอักษร`, 'success');
+
+  } catch (err) {
+    showUploadProgress(false);
+    console.error('File read error:', err);
+    showToast('❌ อ่านไฟล์ไม่สำเร็จ: ' + err.message.substring(0,60), 'error');
+    markFileState(name, false);
+  }
 }
+
+// ── TXT ──
+function readTxt(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = () => rej(new Error('อ่าน TXT ไม่ได้'));
+    r.readAsText(file, 'UTF-8');
+  });
+}
+
+// ── PDF via PDF.js ──
+async function readPdf(file, onProgress) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js ยังไม่โหลด — รีเฟรช Browser แล้วลองใหม่');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  const arrayBuf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+  let fullText = '';
+  const total = pdf.numPages;
+
+  for (let i = 1; i <= total; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const pageText = content.items.map(item => item.str).join(' ');
+    fullText += pageText + '\n';
+    if (onProgress) onProgress(Math.round((i / total) * 90));
+  }
+  return fullText.trim();
+}
+
+// ── DOCX via mammoth.js ──
+async function readDocx(file) {
+  if (typeof mammoth === 'undefined') throw new Error('mammoth.js ยังไม่โหลด — รีเฟรช Browser แล้วลองใหม่');
+  const arrayBuf = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer: arrayBuf });
+  if (result.messages && result.messages.length > 0) {
+    console.warn('mammoth warnings:', result.messages);
+  }
+  return result.value.trim();
+}
+
+// ── Upload UI helpers ──
+function showUploadProgress(show, text = '', pct = 0) {
+  const el = document.getElementById('uploadProgress');
+  if (!el) return;
+  el.style.display = show ? 'block' : 'none';
+  if (show) {
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressText').textContent = text;
+  }
+}
+
+function markFileState(name, success, charCount = 0) {
+  const zone = document.getElementById('uploadZone');
+  zone.classList.remove('drag');
+  if (success) {
+    zone.classList.add('has-file');
+    document.getElementById('uploadIcon').textContent = '✅';
+    document.getElementById('uploadTitle').textContent = 'อ่านไฟล์สำเร็จ — เนื้อหาถูกโหลดลงช่องด้านล่างแล้ว';
+    document.getElementById('uploadSub').textContent = `${name} (${charCount.toLocaleString()} ตัวอักษร)`;
+    document.getElementById('fileBadge').innerHTML = `<div class="file-badge">📄 ${name}</div>`;
+  } else {
+    document.getElementById('uploadIcon').textContent = '⚠️';
+    document.getElementById('uploadTitle').textContent = 'อ่านไม่ได้ — ลอง Paste Text ด้านล่างแทน';
+    document.getElementById('uploadSub').textContent = name;
+    document.getElementById('fileBadge').innerHTML = '';
+  }
+}
+
+function markFileUploaded(name) { markFileState(name, true); }
 
 // ═══════════════════════════════════════
 // GENERATE
 // ═══════════════════════════════════════
 async function startGenerate() {
   const textArea = document.getElementById('wiTextarea').value.trim();
-  const fileInput = document.getElementById('fileInput');
-  if (!textArea && fileInput.files.length === 0) {
-    showToast('⚠️ กรุณาอัพโหลดไฟล์ WI หรือวาง text ก่อนครับ', 'warn');
+
+  if (!textArea) {
+    showToast('⚠️ กรุณาอัพโหลดไฟล์ WI หรือ Paste text ก่อนครับ', 'warn');
     document.getElementById('uploadZone').style.borderColor = 'var(--accent-red)';
-    setTimeout(() => { document.getElementById('uploadZone').style.borderColor = ''; }, 2000);
+    document.getElementById('wiTextarea').style.borderColor = 'var(--accent-red)';
+    setTimeout(() => {
+      document.getElementById('uploadZone').style.borderColor = '';
+      document.getElementById('wiTextarea').style.borderColor = '';
+    }, 2500);
     return;
   }
-  const wiContent = textArea || getSampleWI();
+
+  if (textArea.length < 30) {
+    showToast('⚠️ เนื้อหา WI สั้นเกินไป — กรุณาใส่เนื้อหาให้ครบก่อน', 'warn');
+    return;
+  }
+
+  // ── RESET STATE ──
+  generatedData = null;
+  checkStates = {};
+  const wiContent = textArea;
+
+  // Reset loading steps HTML ให้กลับเป็นสถานะเริ่มต้น
+  const stepLabels = [
+    '📄 สกัดขั้นตอนสำคัญและ Safety Points จาก WI',
+    '📚 สร้าง Microlearning Content (3-Layer: What / Why / Safety)',
+    '📝 สร้าง Pre-test (Bloom: Remember/Understand)',
+    '🧩 สร้าง Post-test Scenario-based (Bloom: Apply/Analyze)',
+    '✅ สร้าง OJT Practical Observation Checklist',
+    '🎨 สร้าง Visual Workflow Poster'
+  ];
+  for (let i = 1; i <= 6; i++) {
+    const el = document.getElementById(`ls${i}`);
+    el.className = 'loading-step';
+    el.innerHTML = `<div class="spinner"></div> ${stepLabels[i-1]}`;
+  }
 
   document.getElementById('btnGenerate').disabled = true;
   document.getElementById('loadingPanel').style.display = 'block';
@@ -785,17 +953,15 @@ async function startGenerate() {
       const prev = document.getElementById(`ls${i-1}`);
       prev.classList.remove('active');
       prev.classList.add('done');
-      prev.querySelector('.spinner').style.display = 'none';
-      prev.innerHTML = '✅ ' + prev.innerHTML.replace(/<div[^>]*>.*?<\/div>\s*/,'');
     }
     if (i === 3) {
       await callAIGenerate(wiContent);
     } else {
-      await sleep(550);
+      await sleep(500);
     }
   }
-  const last = document.getElementById(`ls${totalSteps}`);
-  last.classList.remove('active'); last.classList.add('done');
+  document.getElementById(`ls${totalSteps}`).classList.remove('active');
+  document.getElementById(`ls${totalSteps}`).classList.add('done');
 
   await sleep(300);
   document.getElementById('loadingPanel').style.display = 'none';
@@ -806,100 +972,371 @@ async function startGenerate() {
     updateStats();
     markStepsDone();
     setPage('review');
+  } else {
+    showToast('❌ ไม่สามารถสร้างเนื้อหาได้ — ตรวจสอบว่า WI มีขั้นตอนเป็นข้อๆ แล้วลองใหม่', 'error');
   }
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ═══════════════════════════════════════
-// AI API CALL
+// OFFLINE TEMPLATE ENGINE — Rule-based WI Parser
 // ═══════════════════════════════════════
 async function callAIGenerate(wiContent) {
   const jobType = document.getElementById('cfgJobType').value;
 
-  const systemPrompt = `คุณคือ HRD & Instructional Design Expert ที่เชี่ยวชาญการสร้าง Microlearning Content จาก Work Instruction (WI) ในโรงงานอุตสาหกรรม ตามหลัก Bloom's Taxonomy
-
-สร้างผลลัพธ์เป็น JSON ที่มีโครงสร้างดังนี้ทุกครั้ง:
-{
-  "wi_title": "ชื่อ WI ภาษาไทย/อังกฤษ",
-  "job_type": "ประเภทงาน",
-  "learning_objectives": ["วัตถุประสงค์ที่ 1", "วัตถุประสงค์ที่ 2"],
-  "modules": [
-    {
-      "id": 1,
-      "title": "ชื่อ Module",
-      "what_to_do": "ขั้นตอนที่ต้องทำ — สั้นกระชับ",
-      "why_matters": "เหตุผลสำคัญที่ต้องทำขั้นตอนนี้",
-      "safety_points": ["จุดความปลอดภัย"],
-      "quality_points": ["จุดคุณภาพ"],
-      "has_safety_risk": true
+  try {
+    const parsed = offlineParseWI(wiContent, jobType);
+    if (!parsed.wi_title || !parsed.modules || !parsed.pre_test || !parsed.post_test || !parsed.ojt_checklist) {
+      throw new Error('ไม่สามารถสกัดเนื้อหาจาก WI ได้ — กรุณาตรวจสอบว่า WI มีขั้นตอนเป็นข้อๆ');
     }
-  ],
-  "pre_test": [
-    {
-      "id": 1,
-      "bloom_level": "Remember",
-      "question": "คำถาม",
-      "options": {"A": "ตัวเลือก A", "B": "ตัวเลือก B", "C": "ตัวเลือก C", "D": "ตัวเลือก D"},
-      "answer": "A",
-      "explanation": "อธิบายเฉลย"
-    }
-  ],
-  "post_test": [
-    {
-      "id": 1,
-      "bloom_level": "Apply",
-      "question": "โจทย์เชิงสถานการณ์ — ถ้าเจอสถานการณ์นี้ควรทำอย่างไร",
-      "options": {"A": "", "B": "", "C": "", "D": ""},
-      "answer": "A",
-      "explanation": "อธิบายเฉลย"
-    }
-  ],
-  "ojt_checklist": [
-    {
-      "step": 1,
-      "task": "ชื่องานที่ต้องทำ",
-      "critical_point": "จุดสำคัญ/ข้อควรระวัง",
-      "is_safety_critical": true
-    }
-  ]
+    generatedData = parsed;
+    showToast('✅ สร้างเนื้อหาจาก "' + parsed.wi_title.substring(0,30) + '..." สำเร็จ! (Offline Engine)', 'success');
+  } catch (err) {
+    console.error('Generate failed:', err.message);
+    generatedData = null;
+    showToast('❌ ' + err.message.substring(0, 120), 'error');
+  }
 }
 
-กฎสำคัญ:
-- ตอบเป็น JSON ONLY — ห้ามมี preamble, คำอธิบาย หรือ markdown fences ใดๆ
-- สร้างข้อสอบ Post-test เป็น Scenario-based เสมอ (ถ้าเกิดสถานการณ์ X ควรทำอย่างไร)
-- ดึง Safety Warning ทั้งหมดมาใส่ใน safety_points และ OJT checklist
-- ใช้ภาษาที่พนักงานหน้างานเข้าใจได้`;
+// ── Offline WI Parser & Content Generator ──
+function offlineParseWI(wiContent, jobType) {
+  const lines = wiContent.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-  const userMsg = `วิเคราะห์ WI ต่อไปนี้และสร้าง Microlearning Content ตาม JSON Schema:
-
-ประเภทงาน: ${jobType}
-
-เนื้อหา WI:
-${wiContent.substring(0, 2500)}
-
-สร้าง: modules 3-4 อัน, pre_test 4-5 ข้อ (Remember/Understand), post_test 4-5 ข้อ (Apply/Analyze Scenario), ojt_checklist 5-6 รายการ`;
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userMsg }]
-      })
-    });
-    if (!response.ok) throw new Error('API ' + response.status);
-    const data = await response.json();
-    const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
-    const clean = text.replace(/```json|```/g, '').trim();
-    generatedData = JSON.parse(clean);
-  } catch (err) {
-    console.warn('AI call failed, using demo data:', err.message);
-    generatedData = getDemoData();
+  // 1. Extract WI title (first line or line with WI code pattern)
+  let wiTitle = '';
+  const wiCodePattern = /([A-Z]-[A-Z]{2,5}\d{2,}-\d{3}|WI[-_]\S+|I-[A-Z]{2,5}\d{2,}-\d{3})/i;
+  for (const line of lines) {
+    const match = line.match(wiCodePattern);
+    if (match) { wiTitle = line; break; }
   }
+  if (!wiTitle) wiTitle = lines[0] || 'Work Instruction';
+  if (wiTitle.length > 80) wiTitle = wiTitle.substring(0, 80);
+
+  // 2. Extract numbered steps
+  const stepPattern = /^(\d+)[.)]\s*(.+)/;
+  const rawSteps = [];
+  const warningLines = [];
+  let inWarningSection = false;
+
+  for (const line of lines) {
+    if (/ข้อควรระวัง|ข้อห้าม|safety|warning|caution|danger|อันตราย|ห้าม/i.test(line)) {
+      inWarningSection = true;
+    }
+    const stepMatch = line.match(stepPattern);
+    if (stepMatch) {
+      if (inWarningSection) {
+        warningLines.push(stepMatch[2]);
+      } else {
+        rawSteps.push(stepMatch[2]);
+      }
+    } else if (inWarningSection && line.length > 5 && !stepMatch) {
+      if (/^[-•●]/.test(line)) warningLines.push(line.replace(/^[-•●]\s*/, ''));
+    }
+  }
+
+  // Fallback: if no numbered steps, split by sentences
+  if (rawSteps.length < 2) {
+    const sentences = wiContent.split(/[.。\n]/).map(s => s.trim()).filter(s => s.length > 15);
+    for (let i = 0; i < Math.min(sentences.length, 6); i++) {
+      rawSteps.push(sentences[i]);
+    }
+  }
+
+  // Safety keywords detector
+  const safetyKeywords = /safety|guard|interlock|ห้าม|อันตราย|ระวัง|PPE|helmet|เครน|crane|สัญญาณ|lock|emergency|หยุดเครื่อง|ล็อค|ชีวิต|ตก|ลื่น|ไฟฟ้า|สารเคมี|chemical|ร้อน|hot|pressure|แรงดัน/i;
+  const qualityKeywords = /ตรวจสอบ|check|verify|tolerance|spec|standard|มาตรฐาน|คุณภาพ|quality|record|บันทึก|form|report|measure|วัด/i;
+
+  // 3. Build Modules (group steps into 3-4 modules)
+  const moduleCount = Math.min(Math.max(Math.ceil(rawSteps.length / 2), 3), 4);
+  const stepsPerModule = Math.ceil(rawSteps.length / moduleCount);
+  const modules = [];
+
+  for (let m = 0; m < moduleCount; m++) {
+    const moduleSteps = rawSteps.slice(m * stepsPerModule, (m + 1) * stepsPerModule);
+    if (moduleSteps.length === 0) break;
+
+    const combinedText = moduleSteps.join(' ');
+    const hasSafety = safetyKeywords.test(combinedText);
+    const hasQuality = qualityKeywords.test(combinedText);
+
+    const safetyPts = [];
+    const qualityPts = [];
+    moduleSteps.forEach(s => {
+      if (safetyKeywords.test(s)) safetyPts.push(s.substring(0, 80));
+      if (qualityKeywords.test(s)) qualityPts.push(s.substring(0, 80));
+    });
+
+    // Add from warning section if relevant
+    if (hasSafety && warningLines.length > 0) {
+      const wl = warningLines[m % warningLines.length];
+      if (wl && !safetyPts.includes(wl)) safetyPts.push(wl.substring(0, 80));
+    }
+
+    const moduleTitle = buildModuleTitle(moduleSteps, m + 1);
+
+    modules.push({
+      id: m + 1,
+      title: moduleTitle,
+      what_to_do: moduleSteps.join(' → '),
+      why_matters: generateWhyMatters(moduleSteps, hasSafety),
+      safety_points: safetyPts.length > 0 ? safetyPts : (hasSafety ? ['ปฏิบัติตามขั้นตอนอย่างเคร่งครัด'] : []),
+      quality_points: qualityPts.length > 0 ? qualityPts : (hasQuality ? ['ตรวจสอบตามมาตรฐาน WI'] : []),
+      has_safety_risk: hasSafety
+    });
+  }
+
+  // 4. Build Pre-test (Remember/Understand)
+  const preTest = generatePreTest(rawSteps, warningLines, modules);
+
+  // 5. Build Post-test (Apply/Analyze — Scenario-based)
+  const postTest = generatePostTest(rawSteps, warningLines, modules);
+
+  // 6. Build OJT Checklist
+  const ojtChecklist = rawSteps.slice(0, 6).map((step, i) => ({
+    step: i + 1,
+    task: step.substring(0, 120),
+    critical_point: extractCriticalPoint(step, warningLines, i),
+    is_safety_critical: safetyKeywords.test(step)
+  }));
+
+  // 7. Learning Objectives
+  const learningObjectives = [
+    'ผู้เรียนสามารถอธิบายขั้นตอนการปฏิบัติงานตาม ' + wiTitle.substring(0, 40) + ' ได้ถูกต้อง',
+    'ผู้เรียนสามารถระบุข้อควรระวังด้านความปลอดภัยและคุณภาพที่เกี่ยวข้องได้'
+  ];
+  if (warningLines.length > 0) {
+    learningObjectives.push('ผู้เรียนสามารถตอบสนองต่อสถานการณ์ฉุกเฉินหรือสภาวะผิดปกติได้อย่างเหมาะสม');
+  }
+
+  return {
+    wi_title: wiTitle,
+    job_type: jobType,
+    learning_objectives: learningObjectives,
+    modules: modules,
+    pre_test: preTest,
+    post_test: postTest,
+    ojt_checklist: ojtChecklist
+  };
+}
+
+function buildModuleTitle(steps, num) {
+  const combined = steps.join(' ').toLowerCase();
+  if (/เตรียม|set-up|set up|ก่อนเริ่ม|ตรวจสอบ.*ก่อน|pre-operation/i.test(combined)) return 'การเตรียมและ Set-up ก่อนปฏิบัติงาน (Module ' + num + ')';
+  if (/operate|ควบคุม|กดปุ่ม|บิดปุ่ม|control|machine|เครื่อง/i.test(combined)) return 'การปฏิบัติงานที่เครื่องจักร (Module ' + num + ')';
+  if (/ตรวจสอบ|accept|quality|คุณภาพ|check|inspect/i.test(combined)) return 'การตรวจสอบคุณภาพ (Module ' + num + ')';
+  if (/หลัง|post|unload|เสร็จ|สิ้นสุด|finish/i.test(combined)) return 'ขั้นตอนหลังปฏิบัติงานเสร็จ (Module ' + num + ')';
+  if (/safety|ปลอดภัย|ระวัง|ห้าม|อันตราย/i.test(combined)) return 'ข้อควรระวังด้านความปลอดภัย (Module ' + num + ')';
+  return 'ขั้นตอนปฏิบัติงาน Module ' + num;
+}
+
+function generateWhyMatters(steps, hasSafety) {
+  const combined = steps.join(' ');
+  if (hasSafety) return 'ขั้นตอนนี้เกี่ยวข้องกับความปลอดภัย หากปฏิบัติไม่ถูกต้องอาจเกิดอุบัติเหตุหรือความเสียหายต่อชีวิตและทรัพย์สิน';
+  if (/ตรวจสอบ|check|verify|inspect/i.test(combined)) return 'การตรวจสอบอย่างถูกต้องป้องกันข้อผิดพลาดที่อาจส่งผลต่อคุณภาพผลิตภัณฑ์และ Schedule การผลิต';
+  if (/เตรียม|set-up|prepare/i.test(combined)) return 'การเตรียมงานอย่างถูกต้องก่อนเริ่มปฏิบัติงานช่วยลดเวลาสูญเปล่าและป้องกันปัญหาระหว่างการผลิต';
+  return 'การปฏิบัติตามขั้นตอน WI อย่างถูกต้องช่วยรักษาคุณภาพและมาตรฐานการทำงาน';
+}
+
+function extractCriticalPoint(step, warningLines, idx) {
+  if (warningLines.length > idx && warningLines[idx]) return warningLines[idx].substring(0, 100);
+  if (/ห้าม|อันตราย|ระวัง|safety|critical/i.test(step)) return 'ปฏิบัติตามขั้นตอนอย่างเคร่งครัด ห้ามข้ามขั้นตอน';
+  if (/ตรวจสอบ|check|verify/i.test(step)) return 'ตรวจสอบให้ถูกต้องก่อนดำเนินการขั้นตอนถัดไป';
+  return 'ปฏิบัติตาม WI — ห้ามดัดแปลงขั้นตอนโดยไม่ได้รับอนุมัติ';
+}
+
+function generatePreTest(steps, warnings, modules) {
+  const questions = [];
+  const usedSteps = [];
+
+  // Q1 — Remember: ขั้นตอนแรก
+  if (steps.length > 0) {
+    const s = steps[0];
+    const wrongOpts = generateWrongOptions(s, steps, 'remember');
+    questions.push({
+      id: 1, bloom_level: 'Remember',
+      question: 'ก่อนเริ่มปฏิบัติงาน สิ่งแรกที่ต้องทำคืออะไร?',
+      options: { A: truncStep(s), B: wrongOpts[0], C: wrongOpts[1], D: wrongOpts[2] },
+      answer: 'A',
+      explanation: 'ตาม WI กำหนดให้ทำขั้นตอนนี้ก่อนเสมอ: ' + truncStep(s)
+    });
+    usedSteps.push(0);
+  }
+
+  // Q2 — Understand: เหตุผลความปลอดภัย
+  if (warnings.length > 0) {
+    const w = warnings[0];
+    questions.push({
+      id: 2, bloom_level: 'Understand',
+      question: 'เหตุใดจึงต้องปฏิบัติตาม "' + truncStep(w) + '"?',
+      options: {
+        A: 'เพื่อความปลอดภัยและป้องกันอุบัติเหตุระหว่างปฏิบัติงาน',
+        B: 'เป็นขั้นตอนที่ทำหรือไม่ทำก็ได้ ขึ้นกับดุลยพินิจ',
+        C: 'เพื่อให้ดูเป็นระเบียบเรียบร้อยเท่านั้น',
+        D: 'ไม่มีเหตุผลเฉพาะ เป็นแค่ข้อกำหนดทั่วไป'
+      },
+      answer: 'A',
+      explanation: 'ข้อกำหนดนี้มีไว้เพื่อป้องกันอันตราย — ต้องปฏิบัติตามทุกครั้ง'
+    });
+  }
+
+  // Q3 — Remember: ขั้นตอนกลาง
+  const midIdx = Math.floor(steps.length / 2);
+  if (steps.length > 2) {
+    const s = steps[midIdx];
+    const wrongOpts = generateWrongOptions(s, steps, 'remember');
+    questions.push({
+      id: 3, bloom_level: 'Remember',
+      question: 'ขั้นตอนที่ ' + (midIdx + 1) + ' ของ WI คืออะไร?',
+      options: { A: wrongOpts[0], B: truncStep(s), C: wrongOpts[1], D: wrongOpts[2] },
+      answer: 'B',
+      explanation: 'ตาม WI ขั้นตอนที่ ' + (midIdx + 1) + ' คือ ' + truncStep(s)
+    });
+  }
+
+  // Q4 — Understand: จำนวนขั้นตอน
+  questions.push({
+    id: 4, bloom_level: 'Understand',
+    question: 'WI ฉบับนี้มีขั้นตอนหลักทั้งหมดกี่ขั้นตอน?',
+    options: {
+      A: steps.length + ' ขั้นตอน',
+      B: (steps.length + 2) + ' ขั้นตอน',
+      C: (steps.length - 1) + ' ขั้นตอน',
+      D: (steps.length + 4) + ' ขั้นตอน'
+    },
+    answer: 'A',
+    explanation: 'WI ฉบับนี้มีขั้นตอนหลักทั้งหมด ' + steps.length + ' ขั้นตอน'
+  });
+
+  // Q5 — Remember: ขั้นตอนสุดท้าย
+  if (steps.length > 1) {
+    const lastStep = steps[steps.length - 1];
+    const wrongOpts = generateWrongOptions(lastStep, steps, 'remember');
+    questions.push({
+      id: 5, bloom_level: 'Remember',
+      question: 'ขั้นตอนสุดท้ายของ WI นี้คืออะไร?',
+      options: { A: wrongOpts[0], B: wrongOpts[1], C: truncStep(lastStep), D: wrongOpts[2] },
+      answer: 'C',
+      explanation: 'ขั้นตอนสุดท้ายคือ: ' + truncStep(lastStep)
+    });
+  }
+
+  return questions.slice(0, 5);
+}
+
+function generatePostTest(steps, warnings, modules) {
+  const questions = [];
+
+  // Q1 — Apply: สถานการณ์ผิดปกติ
+  questions.push({
+    id: 1, bloom_level: 'Apply',
+    question: 'ขณะปฏิบัติงานตาม WI อยู่ คุณพบว่าขั้นตอนที่ทำอยู่มีสิ่งผิดปกติเกิดขึ้น คุณควรทำอย่างไร?',
+    options: {
+      A: 'หยุดงานทันทีและรายงาน Supervisor ก่อนดำเนินการต่อ',
+      B: 'ปล่อยให้ทำต่อไปแล้วค่อยแจ้งทีหลัง',
+      C: 'แก้ไขเองตามประสบการณ์โดยไม่ต้องแจ้ง',
+      D: 'ข้ามขั้นตอนนี้ไปทำขั้นตอนถัดไป'
+    },
+    answer: 'A',
+    explanation: 'เมื่อพบสิ่งผิดปกติต้องหยุดงานทันทีและรายงาน Supervisor ก่อนดำเนินการใดๆ ห้ามแก้ไขเองหรือข้ามขั้นตอน'
+  });
+
+  // Q2 — Analyze: เรียงลำดับขั้นตอน
+  if (steps.length >= 3) {
+    const s1 = truncStep(steps[0], 40);
+    const s2 = truncStep(steps[1], 40);
+    const sLast = truncStep(steps[steps.length - 1], 40);
+    questions.push({
+      id: 2, bloom_level: 'Analyze',
+      question: 'ลำดับขั้นตอนที่ถูกต้องของ WI นี้คือข้อใด?',
+      options: {
+        A: sLast + ' → ' + s1 + ' → ' + s2,
+        B: s1 + ' → ' + s2 + ' → ' + sLast,
+        C: s2 + ' → ' + sLast + ' → ' + s1,
+        D: s2 + ' → ' + s1 + ' → ' + sLast
+      },
+      answer: 'B',
+      explanation: 'ต้องทำตามลำดับที่ WI กำหนดเท่านั้น ห้ามสลับขั้นตอน'
+    });
+  }
+
+  // Q3 — Apply: Safety scenario
+  if (warnings.length > 0) {
+    const w = warnings[0];
+    questions.push({
+      id: 3, bloom_level: 'Apply',
+      question: 'เพื่อนร่วมงานกำลังจะข้ามขั้นตอนด้านความปลอดภัยเพราะรีบมาก คุณควรทำอย่างไร?',
+      options: {
+        A: 'ปล่อยให้ทำ เพราะเขาเป็นคนมีประสบการณ์',
+        B: 'ห้ามเด็ดขาด — ต้องปฏิบัติตามขั้นตอนความปลอดภัยทุกครั้ง',
+        C: 'ช่วยทำให้เร็วขึ้นเพื่อชดเชยเวลาที่เสีย',
+        D: 'รอดูว่าจะเกิดอะไรขึ้นก่อนค่อยตัดสินใจ'
+      },
+      answer: 'B',
+      explanation: 'ห้ามข้ามขั้นตอนความปลอดภัยไม่ว่ากรณีใดๆ — ต้องหยุดและแก้ไขให้ถูกต้องก่อนเสมอ'
+    });
+  }
+
+  // Q4 — Analyze: PPE
+  questions.push({
+    id: 4, bloom_level: 'Analyze',
+    question: 'หาก WI กำหนดให้สวม PPE แต่คุณพบว่า PPE ที่มีอยู่ชำรุด ควรทำอย่างไร?',
+    options: {
+      A: 'ใช้ PPE ที่ชำรุดไปก่อนแล้วค่อยเปลี่ยนทีหลัง',
+      B: 'ไม่ต้องสวม PPE ก็ได้ถ้าระมัดระวัง',
+      C: 'หยุดงาน — เบิก PPE ใหม่ก่อน ห้ามปฏิบัติงานโดยไม่มี PPE ที่สมบูรณ์',
+      D: 'ยืม PPE เพื่อนร่วมงานมาใช้'
+    },
+    answer: 'C',
+    explanation: 'PPE ที่ชำรุดไม่สามารถป้องกันอันตรายได้ ต้องหยุดงานและเบิก PPE ใหม่ก่อนเสมอ'
+  });
+
+  // Q5 — Apply: หลังปฏิบัติงาน
+  questions.push({
+    id: 5, bloom_level: 'Apply',
+    question: 'หลังปฏิบัติงานตาม WI เสร็จสิ้น คุณควรทำอะไรเป็นอันดับแรก?',
+    options: {
+      A: 'เก็บเครื่องมือแล้วไปพักเลย',
+      B: 'ตรวจสอบผลงานและบันทึกข้อมูลลง Form/Report ตามที่ WI กำหนด',
+      C: 'แจ้งเพื่อนร่วมงานว่าทำเสร็จแล้ว',
+      D: 'เริ่มงานถัดไปทันทีโดยไม่ต้องบันทึก'
+    },
+    answer: 'B',
+    explanation: 'ต้องตรวจสอบผลงานและบันทึกข้อมูลให้ครบถ้วนก่อนเสมอ เอกสารคือหลักฐานสำคัญสำหรับ Traceability'
+  });
+
+  return questions.slice(0, 5);
+}
+
+function truncStep(text, len) {
+  len = len || 70;
+  if (!text) return 'N/A';
+  return text.length > len ? text.substring(0, len) + '...' : text;
+}
+
+function generateWrongOptions(correctStep, allSteps, type) {
+  const wrongs = [
+    'ไม่ต้องทำขั้นตอนนี้ ข้ามไปขั้นตอนถัดไปได้',
+    'รอ Supervisor สั่งก่อนจึงเริ่มทำ',
+    'ทำเฉพาะเมื่อเห็นว่าจำเป็นเท่านั้น',
+    'ตรวจสอบอุปกรณ์ทั้งหมดในพื้นที่ก่อน',
+    'บันทึกข้อมูลลง Log Book ก่อนเริ่มงาน',
+    'แจ้ง QC ให้มาตรวจสอบก่อน'
+  ];
+  // Shuffle and pick 3
+  const shuffled = wrongs.sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 3);
+}
+
+// เปิดใช้ Demo Mode ได้เมื่อต้องการทดสอบ UI โดยไม่มี API
+function loadDemoMode() {
+  generatedData = getDemoData();
+  checkStates = {};
+  renderResults();
+  updateStats();
+  markStepsDone();
+  setPage('review');
+  showToast('🔧 Demo Mode: แสดงข้อมูลตัวอย่าง Roll Grinding WI', 'info');
 }
 
 // ═══════════════════════════════════════
@@ -1022,42 +1459,49 @@ async function regenQuestion(btn, id, type) {
   card.style.opacity = '0.5';
   card.style.pointerEvents = 'none';
 
-  const bloomLevel = type === 'pre' ? 'Remember หรือ Understand' : 'Apply หรือ Analyze (เชิงสถานการณ์)';
-  const existing = (type === 'pre' ? generatedData.pre_test : generatedData.post_test)
-    .map(q => q.question).join(' || ');
-
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        system: 'คุณคือ HRD Expert สร้างข้อสอบ Bloom Taxonomy สำหรับ WI โรงงาน ตอบเป็น JSON เท่านั้น ห้ามมี preamble หรือ markdown',
-        messages: [{ role: 'user', content: `สร้างข้อสอบใหม่ 1 ข้อ ระดับ ${bloomLevel} สำหรับ WI: "${generatedData.wi_title}"
-ห้ามซ้ำกับโจทย์เหล่านี้: ${existing}
-ตอบ JSON format: {"id":${id},"bloom_level":"${type==='pre'?'Remember':'Apply'}","question":"คำถาม","options":{"A":"ตัวเลือก A","B":"ตัวเลือก B","C":"ตัวเลือก C","D":"ตัวเลือก D"},"answer":"A","explanation":"อธิบายเฉลย"}` }]
-      })
-    });
-    if (!resp.ok) throw new Error('API ' + resp.status);
-    const data = await resp.json();
-    const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
-    const clean = text.replace(/```json|```/g, '').trim();
-    const newQ = JSON.parse(clean);
+    await sleep(500); // Simulate processing time
+
+    // Offline regen — generate variant question
+    const bloomLevel = type === 'pre' ? (Math.random() > 0.5 ? 'Remember' : 'Understand') : (Math.random() > 0.5 ? 'Apply' : 'Analyze');
+    const variants = type === 'pre' ? [
+      { q: 'ข้อใดเป็นขั้นตอนที่ถูกต้องตาม WI "' + generatedData.wi_title.substring(0,30) + '"?', a: 'A',
+        opts: { A: 'ปฏิบัติตามลำดับขั้นตอนที่ WI กำหนดทุกข้อ', B: 'เลือกทำเฉพาะขั้นตอนที่สำคัญ', C: 'ปรับเปลี่ยนลำดับได้ตามสะดวก', D: 'ทำเฉพาะขั้นตอนแรกและสุดท้าย' },
+        exp: 'ต้องปฏิบัติตามลำดับขั้นตอนที่ WI กำหนดทุกข้อ ห้ามข้ามหรือสลับ' },
+      { q: 'ใครเป็นผู้อนุมัติให้แก้ไขขั้นตอน WI ได้?', a: 'B',
+        opts: { A: 'Operator หน้างานที่มีประสบการณ์', B: 'ผู้จัดการฝ่ายหรือผู้มีอำนาจตาม Document Control', C: 'ช่างซ่อมบำรุง', D: 'QC Inspector' },
+        exp: 'การแก้ไข WI ต้องผ่านกระบวนการ Document Control และได้รับอนุมัติจากผู้มีอำนาจเท่านั้น' },
+      { q: 'หาก WI ที่ใช้อยู่เป็น Revision เก่า ควรทำอย่างไร?', a: 'C',
+        opts: { A: 'ใช้ต่อไปได้ เนื้อหาเหมือนกัน', B: 'ขอ Revision ใหม่เมื่อมีปัญหา', C: 'หยุดใช้ทันทีและขอ Revision ล่าสุดจาก Document Control', D: 'ใช้ได้ถ้ายังไม่หมดอายุ' },
+        exp: 'ต้องใช้ WI Revision ล่าสุดเท่านั้น Revision เก่าอาจมีขั้นตอนที่ล้าสมัยหรือไม่ปลอดภัย' }
+    ] : [
+      { q: 'ขณะปฏิบัติงานตาม WI เครื่องจักรมีเสียงผิดปกติ คุณควรทำอย่างไร?', a: 'A',
+        opts: { A: 'หยุดเครื่องทันที รายงาน Supervisor และ Maintenance', B: 'ฟังต่ออีก 10 นาทีก่อนตัดสินใจ', C: 'ลดความเร็วเครื่องลงครึ่งหนึ่งแล้วทำต่อ', D: 'บันทึกเสียงไว้แล้วค่อยแจ้งตอนสิ้นกะ' },
+        exp: 'เสียงผิดปกติอาจเป็นสัญญาณของความเสียหายร้ายแรง ต้องหยุดทันทีเพื่อป้องกันอุบัติเหตุ' },
+      { q: 'ระหว่างทำงานตาม WI คุณสังเกตว่าเพื่อนร่วมงานข้ามขั้นตอนที่ 3 ไป ควรทำอย่างไร?', a: 'B',
+        opts: { A: 'ไม่ต้องสนใจ เพราะเขารับผิดชอบงานของเขาเอง', B: 'แจ้งเตือนทันทีและขอให้กลับไปทำขั้นตอนที่ 3 ให้ครบ', C: 'รอดูผลก่อนว่าจะมีปัญหาหรือไม่', D: 'บันทึกไว้แล้วแจ้ง Supervisor สิ้นเดือน' },
+        exp: 'การข้ามขั้นตอน WI อาจทำให้เกิดอุบัติเหตุหรือของเสีย ต้องแจ้งเตือนทันทีเพื่อความปลอดภัยของทุกคน' },
+      { q: 'WI กำหนดให้บันทึกผลงานลง Form ทุกครั้ง แต่วันนี้ Form หมด คุณควรทำอย่างไร?', a: 'D',
+        opts: { A: 'ข้ามการบันทึกไปก่อน ค่อยเขียนย้อนหลังทีหลัง', B: 'จำไว้ในหัวแล้วเขียนพรุ่งนี้', C: 'บันทึกลงกระดาษอะไรก็ได้', D: 'ใช้กระดาษสำรองจดบันทึกข้อมูลให้ครบ แล้วย้ายลง Form จริงโดยเร็วที่สุด' },
+        exp: 'การบันทึกข้อมูลต้องทำทันทีเสมอ หาก Form หมดให้ใช้กระดาษสำรอง แล้วย้ายข้อมูลลง Form ให้เรียบร้อย' }
+    ];
+
+    const pick = variants[Math.floor(Math.random() * variants.length)];
+    const newQ = { id, bloom_level: bloomLevel, question: pick.q, options: pick.opts, answer: pick.a, explanation: pick.exp };
 
     const arr = type === 'pre' ? generatedData.pre_test : generatedData.post_test;
     const idx = arr.findIndex(q => q.id === id);
     if (idx !== -1) arr[idx] = { ...newQ, id };
-
     if (type === 'pre') document.getElementById('tabPretest').innerHTML = renderQuizList(generatedData.pre_test, 'pre');
     else document.getElementById('tabPosttest').innerHTML = renderQuizList(generatedData.post_test, 'post');
-    showToast('✅ สร้างข้อสอบใหม่สำเร็จ!', 'success');
+    showToast('✅ สร้างข้อสอบใหม่สำเร็จ! (Offline)', 'success');
+
   } catch (err) {
     card.style.opacity = '1';
     card.style.pointerEvents = '';
     btn.disabled = false;
     btn.textContent = '🔄 Regen';
-    showToast('❌ Regen ล้มเหลว — ตรวจสอบ Internet แล้วลองใหม่', 'error');
+    showToast('❌ Regen ล้มเหลว: ' + err.message.substring(0, 80), 'error');
   }
 }
 
@@ -1196,6 +1640,54 @@ function markStepsDone() {
   ['navReview','navPoster','navExport'].forEach(id => {
     document.getElementById(id).classList.add('done');
   });
+}
+
+function resetAll() {
+  // Reset state
+  generatedData = null;
+  checkStates = {};
+
+  // Reset form
+  document.getElementById('wiTextarea').value = '';
+  document.getElementById('fileInput').value = '';
+
+  // Reset upload zone
+  document.getElementById('uploadZone').classList.remove('has-file');
+  document.getElementById('fileBadge').innerHTML = '';
+
+  // Reset sidebar step numbers
+  ['sn1','sn2','sn3','sn4'].forEach((id, i) => {
+    document.getElementById(id).textContent = i + 1;
+  });
+  ['navReview','navPoster','navExport'].forEach(id => {
+    document.getElementById(id).classList.remove('done');
+  });
+
+  // Reset stats
+  ['statModules','statPre','statPost','statOjt'].forEach(id => {
+    document.getElementById(id).textContent = '—';
+  });
+  document.getElementById('statStatus').textContent = 'Pending';
+  document.getElementById('statStatus').className = 'stat-val amber';
+
+  // Reset loading steps
+  const stepLabels = [
+    '📄 สกัดขั้นตอนสำคัญและ Safety Points จาก WI',
+    '📚 สร้าง Microlearning Content (3-Layer: What / Why / Safety)',
+    '📝 สร้าง Pre-test (Bloom: Remember/Understand)',
+    '🧩 สร้าง Post-test Scenario-based (Bloom: Apply/Analyze)',
+    '✅ สร้าง OJT Practical Observation Checklist',
+    '🎨 สร้าง Visual Workflow Poster'
+  ];
+  for (let i = 1; i <= 6; i++) {
+    const el = document.getElementById(`ls${i}`);
+    el.className = 'loading-step';
+    el.innerHTML = `<div class="spinner"></div> ${stepLabels[i-1]}`;
+  }
+  document.getElementById('loadingPanel').style.display = 'none';
+
+  setPage('upload');
+  showToast('🔄 ล้างข้อมูลแล้ว — พร้อมสำหรับ WI ใหม่', 'info');
 }
 
 // ═══════════════════════════════════════
